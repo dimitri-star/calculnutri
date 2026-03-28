@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 const NAV = [
   { to: '/', icon: '⚡', label: 'Calcul calorique' },
   { to: '/plan', icon: '📋', label: 'Plan alimentaire' },
+  { to: '/assistant', icon: '🤖', label: 'Coach IA' },
   { to: '/export', icon: '📥', label: 'Export CSV' },
 ]
 

@@ -1,6 +1,7 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useNutriStore from '../store/useNutriStore.js'
-import { calcAll } from '../lib/tdee.js'
+import { calcAll, calcTargets, calcMacros } from '../lib/tdee.js'
 import ProfileForm from '../components/calc/ProfileForm.jsx'
 import ActivityForm from '../components/calc/ActivityForm.jsx'
 import MacrosResult from '../components/calc/MacrosResult.jsx'
@@ -15,6 +16,17 @@ export default function CalcPage() {
     const res = calcAll(profile)
     if (res) setResults(res)
   }
+
+  // Recalcul en temps réel quand le slider delta ou l'objectif change
+  useEffect(() => {
+    if (!results.tdee) return
+    const delta = profile.delta ?? 250
+    const w = parseFloat(profile.weight)
+    if (!w) return
+    const { cut, maintain, bulk, targetCalories } = calcTargets(results.tdee, profile.goal, delta)
+    const { prot, fat, carbs } = calcMacros(targetCalories, w, profile.goal)
+    setResults({ cut, maintain, bulk, targetCalories, prot, fat, carbs })
+  }, [profile.delta, profile.goal]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const isComplete = profile.age && profile.weight && profile.height
 

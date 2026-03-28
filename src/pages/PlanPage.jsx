@@ -1,35 +1,56 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import ReactMarkdown from 'react-markdown'
 import useNutriStore from '../store/useNutriStore.js'
 import { callAnthropic, parseWeekPlan } from '../lib/anthropic.js'
 import { buildAnalysisPrompt, buildWeekPlanPrompt } from '../lib/prompts.js'
-import { DAYS, MEAL_COLORS, SUPERFOODS, COOK_TIME_LABELS } from '../constants/nutrition.js'
-import FoodTagInput from '../components/plan/FoodTagInput.jsx'
-import FoodListImport from '../components/plan/FoodListImport.jsx'
-import PlanAssistant from '../components/plan/PlanAssistant.jsx'
+import { analyzePDFProfile } from '../lib/analyzePDFProfile.js'
+import { DAYS, MEAL_COLORS, SUPERFOODS } from '../constants/nutrition.js'
+import AnalysisResult from '../components/plan/AnalysisResult.jsx'
 import Card from '../components/ui/Card.jsx'
 import Button from '../components/ui/Button.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 
-const inputStyle = {
-  width: '100%',
-  padding: '12px 18px',
-  borderRadius: 9999,
-  border: '1px solid var(--line)',
-  background: 'var(--surface-input)',
-  color: 'var(--text)',
-  fontSize: 14,
-  fontWeight: 500,
-  fontFamily: 'inherit',
-  outline: 'none',
+function validateAndCorrectPlan(plan, results) {
+  const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+  const meals = ['Petit-déjeuner', 'Déjeuner', 'Collation', 'Dîner']
+  const targetCals  = results.targetCalories
+  const targetCarbs = results.carbs
+
+  days.forEach(day => {
+    if (!plan[day]) return
+    let dayCarbs = 0
+    let dayCals  = 0
+    meals.forEach(meal => {
+      const m = plan[day][meal]
+      if (!m) return
+      dayCarbs += m.glucides  || 0
+      dayCals  += m.calories  || 0
+    })
+    plan[day]._warnings = []
+    const carbsDiff = Math.abs(dayCarbs - targetCarbs)
+    const calsDiff  = Math.abs(dayCals  - targetCals)
+    if (carbsDiff > 15) {
+      plan[day]._warnings.push(`⚠️ Glucides : ${dayCarbs}g vs ${targetCarbs}g cible (écart ${carbsDiff}g)`)
+    }
+    if (calsDiff > 50) {
+      plan[day]._warnings.push(`⚠️ Calories : ${dayCals} kcal vs ${targetCals} kcal cible (écart ${calsDiff} kcal)`)
+    }
+  })
+  return plan
 }
 
-const labelStyle = { display: 'block', fontSize: 13, color: 'var(--muted)', marginBottom: 8, fontWeight: 600 }
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result.split(',')[1])
+    reader.onerror = () => reject(new Error('Lecture du fichier échouée'))
+    reader.readAsDataURL(file)
+  })
+}
 
 function StepIndicator({ current }) {
   const steps = [
-    { n: 1, label: 'Tes aliments' },
+    { n: 1, label: 'Dossier profil' },
     { n: 2, label: 'Analyse IA' },
     { n: 3, label: 'Plan 7 jours' },
   ]
@@ -70,92 +91,214 @@ function StepIndicator({ current }) {
   )
 }
 
-function Step1({ onNext }) {
-  const { foods, setFoods, planPrefs, setPlanPrefs, results } = useNutriStore()
-  const hasResults = results.tdee !== null
+function Step1Upload({ onComplete }) {
+  const [status, setStatus] = useState('idle')
+  const [message, setMessage] = useState('')
+  const [preview, setPreview] = useState(null)
+  const fileRef = useRef()
+  const store = useNutriStore()
+
+  async function handleFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.type !== 'application/pdf') {
+      setStatus('error')
+      setMessage('Envoie uniquement un PDF texte (export Notion, Word, Google Docs...)')
+      return
+    }
+
+    setStatus('loading')
+    setMessage('')
+    setPreview(null)
+
+    try {
+      const base64 = await fileToBase64(file)
+      const result = await analyzePDFProfile(base64)
+
+      store.setFoods({
+        current: result.current || [],
+        likes: result.likes || [],
+        dislikes: result.dislikes || [],
+        accepted: [],
+      })
+      store.setPlanPrefs({
+        budget: result.budget || '',
+        cookTime: result.cookTime || 'moderate',
+        extraInfo: result.notes || '',
+      })
+
+      if (result.profile) {
+        const updates = {}
+        if (result.profile.weight) updates.weight = String(result.profile.weight)
+        if (result.profile.age) updates.age = String(result.profile.age)
+        if (result.profile.height) updates.height = String(result.profile.height)
+        if (result.profile.goal) updates.goal = result.profile.goal === 'cut' ? 'seche' : result.profile.goal === 'bulk' ? 'masse' : 'maintien'
+        if (result.profile.training) updates.training = String(result.profile.training)
+        if (result.profile.job) updates.job = result.profile.job
+        if (result.profile.sex) updates.sex = result.profile.sex === 'male' ? 'homme' : 'femme'
+        if (Object.keys(updates).length > 0) store.setProfile(updates)
+      }
+
+      setPreview(result)
+      setStatus('success')
+    } catch (err) {
+      setStatus('error')
+      setMessage(err.message || "Erreur lors de l'analyse du PDF")
+    } finally {
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
 
   return (
-    <Card>
-      {!hasResults && (
-        <div style={{
-          padding: '14px 18px', borderRadius: 20, marginBottom: 22,
-          background: '#FFF8E1', border: '1px solid rgba(245, 124, 0, 0.25)',
-          fontSize: 13, color: '#E65100', fontWeight: 600,
-        }}>
-          ⚠️ Calcule d'abord tes besoins caloriques sur la page précédente.
+    <div className="step1-upload">
+
+      {status !== 'success' && (
+        <div
+          className={`upload-zone${status === 'loading' ? ' loading' : ''}`}
+          onClick={() => status !== 'loading' && fileRef.current?.click()}
+        >
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".pdf,application/pdf"
+            onChange={handleFile}
+            style={{ display: 'none' }}
+          />
+
+          {status === 'loading' ? (
+            <>
+              <div className="upload-spinner" />
+              <div className="upload-loading-text">
+                <strong>Analyse en cours...</strong>
+                <span>{"L'IA lit ton dossier profil et extrait toutes les informations"}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="upload-icon">📎</div>
+              <div className="upload-text">
+                <strong>Envoie ton dossier profil</strong>
+                <span>Clique ici ou glisse ton PDF</span>
+              </div>
+              <div className="upload-formats">
+                Export Notion · Word · Google Docs · tout PDF texte
+              </div>
+            </>
+          )}
         </div>
       )}
-      <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>Tes aliments</h2>
-      <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-        Renseigne tes habitudes alimentaires pour que l'IA génère un plan adapté.
-      </p>
 
-      <FoodListImport foods={foods} setFoods={setFoods} />
+      {status === 'error' && (
+        <div className="upload-error">
+          <span>⚠️ {message}</span>
+          <button onClick={() => setStatus('idle')}>Réessayer</button>
+        </div>
+      )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        <FoodTagInput
-          label="Aliments consommés actuellement"
-          description="Ce que tu manges déjà au quotidien"
-          tags={foods.current}
-          onChange={(v) => setFoods({ current: v })}
-          tagColor="#2E7D32"
-        />
-        <FoodTagInput
-          label="Aliments aimés"
-          description="Ce que tu apprécies, même si tu n'en manges pas souvent"
-          tags={foods.likes}
-          onChange={(v) => setFoods({ likes: v })}
-          tagColor="#1565C0"
-        />
-        <FoodTagInput
-          label="Aliments exclus / allergies"
-          description="Ce qu'on n'inclura JAMAIS dans ton plan"
-          tags={foods.dislikes}
-          onChange={(v) => setFoods({ dislikes: v })}
-          tagColor="#C62828"
-        />
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <div>
-            <label style={labelStyle}>Budget repas / semaine (€)</label>
-            <input
-              type="number"
-              style={inputStyle}
-              value={planPrefs.budget || ''}
-              onChange={(e) => setPlanPrefs({ budget: e.target.value ? parseFloat(e.target.value) : null })}
-              placeholder="80"
-              min="20"
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Temps de cuisson</label>
-            <select
-              style={inputStyle}
-              value={planPrefs.cookTime}
-              onChange={(e) => setPlanPrefs({ cookTime: e.target.value })}
+      {status === 'success' && preview && (
+        <div className="upload-success">
+          <div className="success-header">
+            <span className="success-check">✅</span>
+            <div>
+              <strong>Analysé avec succès</strong>
+              <span>{"L'IA a extrait toutes les informations de ton profil"}</span>
+            </div>
+            <button
+              className="btn-reupload"
+              onClick={() => { setStatus('idle'); setPreview(null) }}
             >
-              {Object.entries(COOK_TIME_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
-            </select>
+              Changer de fichier
+            </button>
           </div>
-        </div>
 
-        <div>
-          <label style={labelStyle}>Précisions (optionnel)</label>
-          <textarea
-            style={{ ...inputStyle, borderRadius: 22, resize: 'vertical', minHeight: 88 }}
-            value={planPrefs.extraInfo}
-            onChange={(e) => setPlanPrefs({ extraInfo: e.target.value })}
-            placeholder="ex: je mange souvent à la cantine le midi, je suis intolérant au lactose..."
-          />
-        </div>
+          <div className="extraction-summary">
+            {preview.current?.length > 0 && (
+              <div className="summary-section">
+                <div className="summary-label">🥩 Aliments consommés ({preview.current.length})</div>
+                <div className="summary-tags">
+                  {preview.current.map(f => (
+                    <span key={f} className="summary-tag current">{f}</span>
+                  ))}
+                </div>
+              </div>
+            )}
 
-        <Button onClick={onNext} style={{ alignSelf: 'flex-end' }}>
-          Analyser et générer mon plan IA →
-        </Button>
-      </div>
-    </Card>
+            {preview.likes?.length > 0 && (
+              <div className="summary-section">
+                <div className="summary-label">💚 Aliments aimés ({preview.likes.length})</div>
+                <div className="summary-tags">
+                  {preview.likes.map(f => (
+                    <span key={f} className="summary-tag likes">{f}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {preview.dislikes?.length > 0 && (
+              <div className="summary-section">
+                <div className="summary-label">🚫 Exclusions ({preview.dislikes.length})</div>
+                <div className="summary-tags">
+                  {preview.dislikes.map(f => (
+                    <span key={f} className="summary-tag dislikes">{f}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {preview.notes && (
+              <div className="summary-section">
+                <div className="summary-label">📋 Contraintes & mode de vie</div>
+                <div className="summary-notes">{preview.notes}</div>
+              </div>
+            )}
+
+            {preview.profile && Object.values(preview.profile).some(v => v !== null) && (
+              <div className="summary-section">
+                <div className="summary-label">👤 Profil détecté</div>
+                <div className="summary-profile">
+                  {preview.profile.age && <span>🎂 {preview.profile.age} ans</span>}
+                  {preview.profile.weight && <span>⚖️ {preview.profile.weight} kg</span>}
+                  {preview.profile.height && <span>📏 {preview.profile.height} cm</span>}
+                  {preview.profile.goal && (
+                    <span>🎯 {preview.profile.goal === 'cut' ? 'Sèche' : preview.profile.goal === 'bulk' ? 'Prise de masse' : 'Maintien'}</span>
+                  )}
+                  {preview.profile.training && <span>💪 {preview.profile.training}x/semaine</span>}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button className="btn-continue" onClick={onComplete}>
+            Lancer l&apos;analyse IA →
+          </button>
+        </div>
+      )}
+
+      {status === 'idle' && (
+        <div className="upload-help">
+          <details>
+            <summary>💡 Qu&apos;est-ce que je dois mettre dans mon dossier profil ?</summary>
+            <div className="help-content">
+              <p>Ton dossier peut contenir tout ou partie de ces informations :</p>
+              <ul>
+                <li><strong>Alimentation actuelle</strong> — ce que tu manges au quotidien, ta routine des repas</li>
+                <li><strong>Aliments aimés</strong> — ce que tu apprécies même si tu n&apos;en manges pas régulièrement</li>
+                <li><strong>Exclusions</strong> — allergies, intolérances, aliments que tu refuses</li>
+                <li><strong>Objectif</strong> — sèche, prise de masse, maintien</li>
+                <li><strong>Activité</strong> — type de travail, sport pratiqué, fréquence d&apos;entraînement</li>
+                <li><strong>Contraintes</strong> — budget, temps de cuisine, mode de vie</li>
+                <li><strong>Chiffres</strong> — âge, poids, taille (optionnel si déjà rempli)</li>
+              </ul>
+              <p>
+                <strong>Format :</strong> Export Notion en PDF, document Word converti,
+                Google Docs exporté... N&apos;importe quel PDF dont le texte est sélectionnable.
+              </p>
+            </div>
+          </details>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -166,6 +309,14 @@ function Step2({ onNext }) {
   const [accepted, setAccepted] = useState([])
 
   async function handleAnalyze() {
+    if (store.foods.current.length === 0 && store.foods.likes.length === 0) {
+      setError("Aucun aliment n'a été extrait du dossier. Réimporte ton PDF ou vérifie son contenu.")
+      return
+    }
+    if (!store.results.tdee) {
+      setError("Calcule d'abord tes besoins caloriques sur la page précédente.")
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -210,7 +361,7 @@ function Step2({ onNext }) {
             </div>
           )}
           <Button onClick={handleAnalyze} disabled={loading} style={{ margin: '0 auto' }}>
-            {loading ? <><Spinner size={16} /> Analyse en cours...</> : '🔬 Lancer l\'analyse IA'}
+            {loading ? <><Spinner size={16} /> Analyse en cours...</> : "🔬 Lancer l'analyse IA"}
           </Button>
         </Card>
       )}
@@ -221,9 +372,7 @@ function Step2({ onNext }) {
             <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: 'var(--text)' }}>
               Analyse de ton alimentation
             </h3>
-            <div className="markdown-content">
-              <ReactMarkdown>{store.analysis}</ReactMarkdown>
-            </div>
+            <AnalysisResult text={store.analysis} />
           </Card>
 
           <Card>
@@ -276,7 +425,8 @@ function DayPlanReadOnly({ dayData }) {
   let totalFat = 0
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div>
+      <div style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--line)' }}>
@@ -310,17 +460,15 @@ function DayPlanReadOnly({ dayData }) {
             return (
               <tr key={meal} style={{ borderBottom: '1px solid var(--line)' }}>
                 <td style={{ padding: '10px 10px', minWidth: 110 }}>
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      padding: '6px 12px',
-                      borderRadius: 9999,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      background: mc.bg,
-                      color: mc.text,
-                    }}
-                  >
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '6px 12px',
+                    borderRadius: 9999,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    background: mc.bg,
+                    color: mc.text,
+                  }}>
                     {mc.label || meal}
                   </span>
                 </td>
@@ -354,6 +502,14 @@ function DayPlanReadOnly({ dayData }) {
           </tr>
         </tfoot>
       </table>
+      </div>
+      {dayData?._warnings?.length > 0 && (
+        <div className="day-warnings">
+          {dayData._warnings.map((w, i) => (
+            <div key={i} className="day-warning">{w}</div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -371,7 +527,8 @@ function Step3() {
       const prompt = buildWeekPlanPrompt(store.profile, store.results, store.foods, store.planPrefs)
       const text = await callAnthropic(prompt, 'plan')
       const plan = parseWeekPlan(text)
-      store.setWeekPlan(plan)
+      const validatedPlan = validateAndCorrectPlan(plan, store.results)
+      store.setWeekPlan(validatedPlan)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -407,7 +564,10 @@ function Step3() {
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22, flexWrap: 'wrap', gap: 12 }}>
         <h3 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>Plan 7 jours</h3>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Button variant="ghost" onClick={() => navigate('/assistant')} style={{ fontSize: 13, padding: '10px 18px' }}>
+            🤖 Coach IA
+          </Button>
           <Button variant="secondary" onClick={handleGenerate} disabled={loading} style={{ fontSize: 13, padding: '10px 18px' }}>
             {loading ? '...' : '↺ Régénérer'}
           </Button>
@@ -417,45 +577,38 @@ function Step3() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start' }}>
-        <div style={{ flex: '1 1 420px', minWidth: 0 }}>
-          <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-            {DAYS.map((day) => (
-              <button
-                key={day}
-                type="button"
-                onClick={() => store.setCurrentDay(day)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: 9999,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  border: '1px solid',
-                  borderColor: store.currentDay === day ? 'var(--accent-border)' : 'var(--line)',
-                  background: store.currentDay === day ? 'var(--accent-soft)' : 'var(--surface-input)',
-                  color: store.currentDay === day ? 'var(--accent)' : 'var(--muted)',
-                  transition: 'all 0.15s',
-                  fontFamily: 'inherit',
-                }}
-              >
-                {day}
-              </button>
-            ))}
-          </div>
-          <DayPlanReadOnly dayData={store.weekPlan[store.currentDay]} />
-        </div>
-        <div style={{ flex: '1 1 300px', maxWidth: 420, width: '100%' }}>
-          <PlanAssistant weekPlan={store.weekPlan} setWeekPlan={store.setWeekPlan} results={store.results} foods={store.foods} />
-        </div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+        {DAYS.map((day) => (
+          <button
+            key={day}
+            type="button"
+            onClick={() => store.setCurrentDay(day)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 9999,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: '1px solid',
+              borderColor: store.currentDay === day ? 'var(--accent-border)' : 'var(--line)',
+              background: store.currentDay === day ? 'var(--accent-soft)' : 'var(--surface-input)',
+              color: store.currentDay === day ? 'var(--accent)' : 'var(--muted)',
+              transition: 'all 0.15s',
+              fontFamily: 'inherit',
+            }}
+          >
+            {day}
+          </button>
+        ))}
       </div>
+      <DayPlanReadOnly dayData={store.weekPlan[store.currentDay]} />
     </Card>
   )
 }
 
 export default function PlanPage() {
   const store = useNutriStore()
-  const { results, analysis, weekPlan } = store
+  const { analysis, weekPlan } = store
   const [step, setStep] = useState(() => {
     if (weekPlan) return 3
     if (analysis) return 2
@@ -471,11 +624,13 @@ export default function PlanPage() {
   }
 
   return (
-    <div style={{ maxWidth: 1120 }}>
+    <div style={{ maxWidth: 1200 }}>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', marginBottom: 8, letterSpacing: '-0.02em' }}>Plan alimentaire</h1>
-          <p style={{ fontSize: 15, color: 'var(--muted)', fontWeight: 500, maxWidth: 480, lineHeight: 1.55 }}>Génère ton plan 7 jours personnalisé avec l&apos;IA.</p>
+          <p style={{ fontSize: 15, color: 'var(--muted)', fontWeight: 500, maxWidth: 480, lineHeight: 1.55 }}>
+            Génère ton plan 7 jours personnalisé avec l&apos;IA.
+          </p>
         </div>
         {(analysis || weekPlan) && (
           <button onClick={handleReset} style={{
@@ -491,7 +646,7 @@ export default function PlanPage() {
 
       <StepIndicator current={step} />
 
-      {step === 1 && <Step1 onNext={() => setStep(2)} />}
+      {step === 1 && <Step1Upload onComplete={() => setStep(2)} />}
       {step === 2 && <Step2 onNext={() => setStep(3)} />}
       {step === 3 && <Step3 />}
 

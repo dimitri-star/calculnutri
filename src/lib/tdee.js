@@ -19,10 +19,11 @@ export function calcTDEE(bmr, activityFactor) {
   return Math.round(bmr * activityFactor)
 }
 
-export function calcTargets(tdee, goal) {
-  const cut = tdee - 250
+export function calcTargets(tdee, goal, delta = 250) {
+  const d = Math.min(700, Math.max(100, delta))
+  const cut = tdee - d
   const maintain = tdee
-  const bulk = tdee + 250
+  const bulk = tdee + d
   const targetCalories = goal === 'seche' ? cut : goal === 'masse' ? bulk : maintain
   return { cut, maintain, bulk, targetCalories }
 }
@@ -35,11 +36,15 @@ export function calcMacros(targetCalories, weight, goal) {
   const fatCals = fat * 9
   const carbCals = targetCalories - protCals - fatCals
   const carbs = Math.max(50, Math.round(carbCals / 4))
-  return { prot, fat, carbs }
+  // Ajustement pour garantir la cohérence : prot×4 + fat×9 + carbs×4 = targetCalories
+  const realCals = prot * 4 + fat * 9 + carbs * 4
+  const diff = targetCalories - realCals
+  const carbsAdjusted = diff !== 0 ? Math.max(50, Math.round(carbs + diff / 4)) : carbs
+  return { prot, fat, carbs: carbsAdjusted }
 }
 
 export function calcAll(profile) {
-  const { age, weight, height, sex, goal, job, steps, training, sportType } = profile
+  const { age, weight, height, sex, goal, job, steps, training, sportType, delta = 250 } = profile
   const w = parseFloat(weight)
   const h = parseFloat(height)
   const a = parseInt(age)
@@ -47,7 +52,7 @@ export function calcAll(profile) {
   const bmr = Math.round(calcBMR(w, h, a, sex))
   const actFactor = calcActivityFactor(job, steps, training, sportType)
   const tdee = calcTDEE(bmr, actFactor)
-  const { cut, maintain, bulk, targetCalories } = calcTargets(tdee, goal)
+  const { cut, maintain, bulk, targetCalories } = calcTargets(tdee, goal, delta)
   const { prot, fat, carbs } = calcMacros(targetCalories, w, goal)
   return { bmr, tdee, cut, maintain, bulk, targetCalories, prot, fat, carbs }
 }

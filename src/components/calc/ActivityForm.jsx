@@ -103,99 +103,41 @@ export default function ActivityForm() {
 
       <div style={fieldStyle}>
         <label style={labelStyle}>Type de travail</label>
-        <ModeRow
-          leftLabel="Choix rapide"
-          rightLabel="Réponse personnalisée"
-          mode={jobMode}
-          onMode={(m) => setProfile({ jobMode: m })}
-        />
+        <ModeRow leftLabel="Choix rapide" rightLabel="Réponse personnalisée" mode={jobMode} onMode={(m) => setProfile({ jobMode: m })} />
         {jobMode === 'list' ? (
-          <>
-            <select style={{ ...inputStyle, cursor: 'pointer' }} value={profile.job} onChange={set('job')}>
-              {Object.entries(JOB_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <label style={{ ...labelStyle, marginTop: 14 }}>Précision libre (optionnel)</label>
-            <textarea
-              style={textareaStyle}
-              value={profile.jobFreeText}
-              onChange={(e) => setProfile({ jobFreeText: e.target.value })}
-              placeholder="ex. 2 jours télétravail, 3 jours déplacements clients, debout 4 h…"
-              rows={3}
-            />
-          </>
+          <select style={{ ...inputStyle, cursor: 'pointer' }} value={profile.job} onChange={set('job')}>
+            {Object.entries(JOB_LABELS).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
+          </select>
         ) : (
-          <>
-            <textarea
-              style={textareaStyle}
-              value={profile.jobFreeText}
-              onChange={(e) => setProfile({ jobFreeText: e.target.value })}
-              placeholder="Décris ton métier et ta journée type (posture, déplacements, intensité)…"
-              rows={4}
-            />
-            <label style={{ ...labelStyle, marginTop: 14 }}>Équivalent pour le calcul des calories (TDEE)</label>
-            <select style={{ ...inputStyle, cursor: 'pointer' }} value={profile.job} onChange={set('job')}>
-              {Object.entries(JOB_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <p style={hintStyle}>
-              Ta description alimente l’IA ; le menu déroulant ajuste uniquement le facteur d’activité du calcul.
-            </p>
-          </>
+          <textarea
+            style={textareaStyle}
+            value={profile.jobFreeText}
+            onChange={(e) => setProfile({ jobFreeText: e.target.value })}
+            placeholder="Ex: télétravail 3j/semaine assis, 2j terrain debout 5h…"
+            rows={3}
+          />
         )}
       </div>
 
       <div style={fieldStyle}>
         <label style={labelStyle}>Pas quotidiens</label>
-        <ModeRow
-          leftLabel="Choix rapide"
-          rightLabel="Réponse personnalisée"
-          mode={stepsMode}
-          onMode={(m) => setProfile({ stepsMode: m })}
-        />
+        <ModeRow leftLabel="Choix rapide" rightLabel="Réponse personnalisée" mode={stepsMode} onMode={(m) => setProfile({ stepsMode: m })} />
         {stepsMode === 'list' ? (
-          <>
-            <select style={{ ...inputStyle, cursor: 'pointer' }} value={profile.steps} onChange={set('steps')}>
-              {Object.entries(STEPS_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <label style={{ ...labelStyle, marginTop: 14 }}>Précision libre (optionnel)</label>
-            <textarea
-              style={textareaStyle}
-              value={profile.stepsFreeText}
-              onChange={(e) => setProfile({ stepsFreeText: e.target.value })}
-              placeholder="ex. 15k en semaine, 6k le week-end…"
-              rows={2}
-            />
-          </>
+          <select style={{ ...inputStyle, cursor: 'pointer' }} value={profile.steps} onChange={set('steps')}>
+            {Object.entries(STEPS_LABELS).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
+          </select>
         ) : (
-          <>
-            <textarea
-              style={textareaStyle}
-              value={profile.stepsFreeText}
-              onChange={(e) => setProfile({ stepsFreeText: e.target.value })}
-              placeholder="Décris tes pas habituels, marches, vélo trajet, escaliers…"
-              rows={4}
-            />
-            <label style={{ ...labelStyle, marginTop: 14 }}>Fourchette pour le calcul des calories (TDEE)</label>
-            <select style={{ ...inputStyle, cursor: 'pointer' }} value={profile.steps} onChange={set('steps')}>
-              {Object.entries(STEPS_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <p style={hintStyle}>Choisis la fourchette la plus proche de ta moyenne pour le calcul automatique.</p>
-          </>
+          <textarea
+            style={textareaStyle}
+            value={profile.stepsFreeText}
+            onChange={(e) => setProfile({ stepsFreeText: e.target.value })}
+            placeholder="Ex: environ 12k pas/jour en semaine, 5k le weekend…"
+            rows={2}
+          />
         )}
       </div>
 
@@ -203,9 +145,7 @@ export default function ActivityForm() {
         <label style={labelStyle}>Séances sport / semaine</label>
         <select style={{ ...inputStyle, cursor: 'pointer' }} value={profile.training} onChange={set('training')}>
           {Object.entries(TRAINING_LABELS).map(([val, label]) => (
-            <option key={val} value={val}>
-              {label}
-            </option>
+            <option key={val} value={val}>{label}</option>
           ))}
         </select>
       </div>
@@ -214,54 +154,20 @@ export default function ActivityForm() {
         <label style={labelStyle}>Sport / entraînement</label>
         <ModeRow leftLabel="Choix rapide" rightLabel="Réponse personnalisée" mode={sportMode} onMode={(m) => setProfile({ sportMode: m })} />
         {sportMode === 'list' ? (
-          <>
-            <select style={{ ...inputStyle, cursor: 'pointer' }} value={profile.sportType} onChange={set('sportType')}>
-              {Object.entries(SPORT_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <label style={{ ...labelStyle, marginTop: 14 }}>Précision libre (optionnel)</label>
-            <textarea
-              style={textareaStyle}
-              value={profile.sportFreeText}
-              onChange={(e) => setProfile({ sportFreeText: e.target.value })}
-              placeholder="ex. séances 1h15, split PPL, cardio en fin de séance…"
-              rows={3}
-            />
-          </>
+          <select style={{ ...inputStyle, cursor: 'pointer' }} value={profile.sportType} onChange={set('sportType')}>
+            {Object.entries(SPORT_LABELS).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
+          </select>
         ) : (
-          <>
-            <textarea
-              style={textareaStyle}
-              value={profile.sportFreeText}
-              onChange={(e) => setProfile({ sportFreeText: e.target.value })}
-              placeholder="Décris tout ce que tu fais vraiment (sports, durée, intensité)…"
-              rows={4}
-            />
-            <label style={{ ...labelStyle, marginTop: 14 }}>Profil pour le calcul des calories (TDEE)</label>
-            <select style={{ ...inputStyle, cursor: 'pointer' }} value={profile.sportType} onChange={set('sportType')}>
-              {Object.entries(SPORT_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <p style={hintStyle}>Choisis le profil le plus proche pour le multiplicateur d’entraînement.</p>
-          </>
+          <textarea
+            style={textareaStyle}
+            value={profile.sportFreeText}
+            onChange={(e) => setProfile({ sportFreeText: e.target.value })}
+            placeholder="Ex: musculation split PPL 1h15, cardio léger 20min après séance…"
+            rows={3}
+          />
         )}
-      </div>
-
-      <div style={{ marginBottom: 0 }}>
-        <label style={labelStyle}>Détail des séances (optionnel)</label>
-        <textarea
-          style={{ ...textareaStyle, minHeight: 76 }}
-          value={profile.trainingFreeText}
-          onChange={(e) => setProfile({ trainingFreeText: e.target.value })}
-          placeholder="Objectifs, blessures, salle / extérieur, matériel…"
-          rows={3}
-        />
       </div>
     </div>
   )

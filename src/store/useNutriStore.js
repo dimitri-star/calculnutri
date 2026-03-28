@@ -21,6 +21,7 @@ const useNutriStore = create(
         sportMode: 'list',
         sportFreeText: '',
         trainingFreeText: '',
+        delta: 250,
       },
 
       results: {
@@ -67,6 +68,7 @@ const useNutriStore = create(
           stepsMode: 'list', stepsFreeText: '',
           sportMode: 'list', sportFreeText: '',
           trainingFreeText: '',
+          delta: 250,
         },
         results: { bmr: null, tdee: null, cut: null, maintain: null, bulk: null, targetCalories: null, prot: null, carbs: null, fat: null },
         foods: { current: [], likes: [], dislikes: [], accepted: [] },

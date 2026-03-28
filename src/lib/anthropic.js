@@ -65,23 +65,29 @@ const DEMO_PLAN = {
 }
 
 export async function callAnthropic(
-  prompt,
+  promptOrMessages,
   type = 'analysis',
-  { max_tokens: maxTokens = 4096, timeoutMs = TIMEOUT_MS } = {}
+  { max_tokens: maxTokens = 4096, timeoutMs = TIMEOUT_MS, system } = {}
 ) {
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
 
   if (!apiKey || apiKey === 'sk-ant-votre-cle-ici') {
-    // Mode démo : retourne des données factices après un délai simulé
     await new Promise(r => setTimeout(r, 1200))
     if (type === 'plan') return JSON.stringify(DEMO_PLAN)
     return DEMO_ANALYSIS
   }
 
+  const messages = Array.isArray(promptOrMessages)
+    ? promptOrMessages
+    : [{ role: 'user', content: promptOrMessages }]
+
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
+    const body = { model: MODEL, max_tokens: maxTokens, messages }
+    if (system) body.system = system
+
     const res = await fetch(API_URL, {
       method: 'POST',
       headers: {
@@ -90,11 +96,7 @@ export async function callAnthropic(
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true',
       },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: maxTokens,
-        messages: [{ role: 'user', content: prompt }],
-      }),
+      body: JSON.stringify(body),
       signal: controller.signal,
     })
 

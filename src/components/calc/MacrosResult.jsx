@@ -77,16 +77,15 @@ export default function MacrosResult() {
 
   const goalLabel = GOAL_LABELS[profile.goal] || profile.goal
 
+  const delta = profile.delta ?? 250
   const note = (() => {
     const g = profile.goal
-    const p = results.prot,
-      c = results.carbs,
-      f = results.fat
+    const p = results.prot, c = results.carbs, f = results.fat
     if (g === 'seche')
-      return `En sèche, tu vises un déficit de 250 kcal. Les protéines sont élevées (${p}g) pour protéger ta masse musculaire. Les glucides (${c}g) sont limités mais suffisants pour tes entraînements.`
+      return `En sèche avec un déficit de ${delta} kcal, les protéines élevées (${p}g) protègent ta masse musculaire. Les glucides (${c}g) restent suffisants pour tes entraînements.`
     if (g === 'masse')
-      return `En prise de masse, tu manges 250 kcal au-dessus de ta maintenance. Les protéines (${p}g) permettent la synthèse musculaire, les glucides (${c}g) alimentent tes entraînements intensifs.`
-    return `En maintien, tu consommes exactement tes besoins énergétiques. Tes macros : ${p}g de protéines, ${c}g de glucides, ${f}g de lipides garantissent un équilibre optimal.`
+      return `En prise de masse avec +${delta} kcal, les protéines (${p}g) permettent la synthèse musculaire, les glucides (${c}g) alimentent tes entraînements intensifs.`
+    return `En maintien, tu consommes exactement tes besoins. Tes macros : ${p}g de protéines, ${c}g de glucides, ${f}g de lipides garantissent un équilibre optimal.`
   })()
 
   return (
@@ -131,6 +130,15 @@ export default function MacrosResult() {
           BMR :{' '}
           <span style={{ fontFamily: '"DM Mono", monospace', color: 'var(--text)', fontWeight: 700 }}>{results.bmr} kcal</span>
         </div>
+        {profile.goal !== 'maintien' && (
+          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>
+            TDEE : <span style={{ fontFamily: '"DM Mono", monospace', color: 'var(--text)' }}>{results.tdee}</span>
+            {' '}—{' '}
+            {profile.goal === 'seche' ? `Déficit : −${profile.delta ?? 250}` : `Surplus : +${profile.delta ?? 250}`} kcal
+            {' '}→{' '}
+            Cible : <span style={{ fontFamily: '"DM Mono", monospace', color: 'var(--accent)', fontWeight: 700 }}>{results.targetCalories} kcal</span>
+          </div>
+        )}
       </div>
 
       <div style={{ marginBottom: 22 }}>
@@ -146,9 +154,9 @@ export default function MacrosResult() {
         >
           Cibles caloriques
         </div>
-        <CalTarget label="🔥 Sèche (−250)" value={results.cut} isHighlighted={profile.goal === 'seche'} />
+        <CalTarget label={`🔥 Sèche (−${profile.delta ?? 250})`} value={results.cut} isHighlighted={profile.goal === 'seche'} />
         <CalTarget label="⚖️ Maintien" value={results.maintain} isHighlighted={profile.goal === 'maintien'} />
-        <CalTarget label="💪 Prise de masse (+250)" value={results.bulk} isHighlighted={profile.goal === 'masse'} />
+        <CalTarget label={`💪 Prise de masse (+${profile.delta ?? 250})`} value={results.bulk} isHighlighted={profile.goal === 'masse'} />
       </div>
 
       <div style={{ marginBottom: 22 }}>

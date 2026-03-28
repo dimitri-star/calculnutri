@@ -91,3 +91,343 @@ button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* ── Step1Upload ── */
+.step1-upload {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.upload-zone {
+  border: 2px dashed #f97316;
+  border-radius: 16px;
+  padding: 48px 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fff8f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.upload-zone:hover {
+  background: #fff0e0;
+  border-color: #ea6c0a;
+  transform: translateY(-1px);
+}
+
+.upload-zone.loading {
+  cursor: default;
+  opacity: 0.8;
+}
+
+.upload-icon { font-size: 48px; }
+
+.upload-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.upload-text strong {
+  font-size: 17px;
+  color: #1a1a1a;
+}
+
+.upload-text span {
+  font-size: 14px;
+  color: #888;
+}
+
+.upload-formats {
+  font-size: 12px;
+  color: #bbb;
+  margin-top: 4px;
+}
+
+.upload-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #fde8d8;
+  border-top-color: #f97316;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.upload-loading-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #555;
+}
+
+.upload-loading-text strong { font-size: 15px; }
+.upload-loading-text span   { font-size: 13px; }
+
+.upload-error {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #991b1b;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.upload-error button {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+
+.upload-success {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.success-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.success-check { font-size: 24px; flex-shrink: 0; }
+
+.success-header > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.success-header strong { font-size: 15px; color: #1a1a1a; }
+.success-header span   { font-size: 13px; color: #888; }
+
+.btn-reupload {
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #666;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.btn-reupload:hover { background: #f9fafb; }
+
+.extraction-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+.summary-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.summary-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.summary-tag.current  { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+.summary-tag.likes    { background: #fdf2f8; color: #9d174d; border: 1px solid #fbcfe8; }
+.summary-tag.dislikes { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+.summary-notes {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.6;
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.summary-profile {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.summary-profile span {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.btn-continue {
+  width: 100%;
+  background: #f97316;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-family: inherit;
+}
+
+.btn-continue:hover { background: #ea6c0a; }
+
+.upload-help {
+  margin-top: 8px;
+}
+
+.upload-help summary {
+  font-size: 13px;
+  color: #888;
+  cursor: pointer;
+  padding: 8px 0;
+  font-family: inherit;
+}
+
+.help-content {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.7;
+}
+
+.help-content ul {
+  margin: 8px 0 8px 16px;
+}
+
+.help-content li { margin-bottom: 4px; }
+
+/* ── AnalysisResult cards ── */
+.analysis-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.analysis-card {
+  border-radius: 14px;
+  padding: 20px 22px;
+  border: 1px solid transparent;
+}
+
+.card-good        { background: #f0fdf4; border-color: #bbf7d0; }
+.card-bad         { background: #fef2f2; border-color: #fecaca; }
+.card-deficiency  { background: #eff6ff; border-color: #bfdbfe; }
+.card-superfoods  { background: #fff7ed; border-color: #fed7aa; }
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.card-emoji { font-size: 20px; }
+
+.card-header h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.card-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.analysis-item {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 4px 8px;
+  align-items: baseline;
+  padding: 8px 0;
+  border-top: 1px solid rgba(0,0,0,0.05);
+}
+
+.analysis-item:first-child { border-top: none; }
+
+.item-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: #1a1a1a;
+  text-transform: capitalize;
+}
+
+.item-desc {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.5;
+  grid-column: 2;
+}
+
+.item-substitute {
+  font-size: 12px;
+  color: #f97316;
+  font-weight: 600;
+  grid-column: 2;
+  margin-top: 2px;
+}
+
+/* ── Day warnings ── */
+.day-warnings {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.day-warning {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #c2410c;
+  font-weight: 500;
+}
