@@ -108,5 +108,17 @@ PLAN ALIMENTAIRE ACTUEL
 ${JSON.stringify(weekPlan ?? {}, null, 2)}
 `
 
-  return `${OPENING}\n${header}\n${ASSISTANT_EXPERT_STATIC}`
+  const lock = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERROUILLAGE — CALCUL NUTRICALC (priorité sur la conversation)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Ces chiffres viennent de l'application : ils font foi. Ne les contredis jamais ni ne les « optimises » vers le bas sans demande explicite de l'utilisateur.
+
+- Calories journalières CIBLE pour chaque jour du plan (après toute modification) : ${results?.targetCalories ?? '?'} kcal ±30 kcal par jour. La somme des 4 repas (Petit-déjeuner + Déjeuner + Collation + Dîner) de chaque jour DOIT tomber dans cette fourchette.
+- Macros journalières CIBLES : ${prot}g protéines, ${carbs}g glucides, ${fat}g lipides. Ne pas effondrer les calories totales ni sacrifier les protéines sous prétexte d'échanger un aliment : rééquilibre glucides/lipides pour tenir la cible calorique.
+- Ne modifie pas le BMR/TDEE/objectif déficit ou surplus affichés dans le profil sauf si l'utilisateur te demande explicitement de revoir sa stratégie (dans ce cas, réponds en texte sans changer les champs du JSON du plan pour refléter un autre calcul sauf demande claire).
+- Si l'utilisateur demande seulement de remplacer un aliment ou un repas, conserve le total du jour proche de ${results?.targetCalories ?? 'la cible'} kcal.
+`
+
+  return `${OPENING}\n${header}\n${lock}\n${ASSISTANT_EXPERT_STATIC}`
 }

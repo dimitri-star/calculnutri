@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 // eslint-disable-next-line no-unused-vars -- motion used as <motion.div /> etc.
 import { motion } from 'framer-motion'
 import { Paperclip, Send } from 'lucide-react'
+import useNutriStore from '../../store/useNutriStore.js'
 import { callAnthropic, parseWeekPlanStrict, applyWeekPlanUpdate } from '../../lib/anthropic.js'
 import { buildAssistantSystemPrompt } from '../../lib/assistantSystemPrompt.js'
 import { DAYS } from '../../constants/nutrition.js'
@@ -63,6 +64,14 @@ function demoReschedulePlan(weekPlan) {
   }
 }
 
+function buildApiMessagesFromStore() {
+  const list = useNutriStore.getState().assistantMessages
+  return list
+    .filter((m) => m.role === 'user' || m.role === 'assistant')
+    .slice(1)
+    .map((m) => ({ role: m.role, content: m.content }))
+}
+
 /**
  * @param {{ weekPlan?: object | null, setWeekPlan?: (p: object) => void, results: object, foods: object, profile: object, layout?: 'page' | 'embedded' }} props
  */
@@ -74,13 +83,10 @@ export default function PlanAssistant({
   profile,
   layout = 'page',
 }) {
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content:
-        "Je suis ton coach nutrition NutriCalc : pose-moi n'importe quelle question (timing des repas, protéines, sèche/masse, digestion, récupération, etc.) comme à un expert.\n\nQuand tu auras un plan 7 jours généré dans l'app, tu pourras aussi me demander de réorganiser la semaine (aliments, jours, repas) — j'adapterai en respectant tes objectifs et tes listes d'aliments.",
-    },
-  ])
+  const messages = useNutriStore((s) => s.assistantMessages)
+  const setAssistantMessages = useNutriStore((s) => s.setAssistantMessages)
+  const resetCoachMessages = useNutriStore((s) => s.resetCoachMessages)
+
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
@@ -98,7 +104,7 @@ export default function PlanAssistant({
     const text = input.trim()
     if (!text || loading) return
     setInput('')
-    setMessages((m) => [...m, { role: 'user', content: text }])
+    setAssistantMessages((m) => [...m, { role: 'user', content: text }])
     setLoading(true)
 
     const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
@@ -108,27 +114,23 @@ export default function PlanAssistant({
       if (useDemo) {
         await new Promise((r) => setTimeout(r, 1000))
         if (!hasPlan) {
-          setMessages((m) => [
+          setAssistantMessages((m) => [
             ...m,
             {
               role: 'assistant',
               content:
-                "Exemple démo : avec une clé API Anthropic dans `.env`, je réponds à tes questions comme un expert (macros, timing, sommeil, digestion…). Génère aussi un plan sur **Plan alimentaire** pour que je puisse le modifier quand tu le demandes.",
+                "Exemple démo : avec une clé API Anthropic dans .env, je réponds à tes questions comme un expert (macros, timing, sommeil, digestion…). Génère aussi un plan sur Plan alimentaire pour que je puisse le modifier quand tu le demandes.",
             },
           ])
           return
         }
         const { plan, msg } = demoReschedulePlan(weekPlan)
         setWeekPlan?.(plan)
-        setMessages((m) => [...m, { role: 'assistant', content: msg }])
+        setAssistantMessages((m) => [...m, { role: 'assistant', content: msg }])
         return
       }
 
-      const apiMessages = messages
-        .filter((m) => m.role === 'user' || m.role === 'assistant')
-        .slice(1)
-        .map((m) => ({ role: m.role, content: m.content }))
-      apiMessages.push({ role: 'user', content: text })
+      const apiMessages = buildApiMessagesFromStore()
 
       const systemPrompt = buildAssistantSystemPrompt({
         profile: profile ?? {},
@@ -152,7 +154,7 @@ export default function PlanAssistant({
             const { plan: next, changed } = applyWeekPlanUpdate(parsed, weekPlan)
             if (changed) {
               setWeekPlan(next)
-              setMessages((m) => [
+              setAssistantMessages((m) => [
                 ...m,
                 { role: 'assistant', content: explanation + '\n\n✅ Plan mis à jour automatiquement.' },
               ])
@@ -162,9 +164,9 @@ export default function PlanAssistant({
         }
       }
 
-      setMessages((m) => [...m, { role: 'assistant', content: raw.replace('---JSON---', '').trim() }])
+      setAssistantMessages((m) => [...m, { role: 'assistant', content: raw.replace('---JSON---', '').trim() }])
     } catch (e) {
-      setMessages((m) => [...m, { role: 'assistant', content: `Erreur : ${e.message || String(e)}` }])
+      setAssistantMessages((m) => [...m, { role: 'assistant', content: `Erreur : ${e.message || String(e)}` }])
     } finally {
       setLoading(false)
     }
@@ -245,8 +247,31 @@ export default function PlanAssistant({
             />
           </div>
           <p style={{ margin: '6px 0 0', fontSize: 12, fontWeight: 600, color: 'var(--muted)', lineHeight: 1.45 }}>
-            Questions expert + adaptation du plan 7 jours · Propulsé par Claude
+            Questions expert + adaptation du plan 7 jours · Historique enregistré sur cet appareil
           </p>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => {
+              if (loading) return
+              if (window.confirm('Effacer toute la conversation avec le coach ?')) resetCoachMessages()
+            }}
+            style={{
+              marginTop: 10,
+              padding: '6px 12px',
+              fontSize: 11,
+              fontWeight: 700,
+              fontFamily: 'inherit',
+              borderRadius: 9999,
+              border: '1px solid var(--line)',
+              background: 'var(--surface-input)',
+              color: 'var(--muted)',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.6 : 1,
+            }}
+          >
+            Nouvelle conversation
+          </button>
         </div>
       </div>
 
@@ -263,7 +288,7 @@ export default function PlanAssistant({
       >
         {messages.map((msg, i) => (
           <motion.div
-            key={i}
+            key={`${i}-${msg.role}-${msg.content.length}`}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -477,7 +502,7 @@ export default function PlanAssistant({
           lineHeight: 1.5,
         }}
       >
-        Propulsé par Anthropic Claude · Conseils personnalisés selon ton profil ; le plan n&apos;est modifié que si tu le demandes et qu&apos;un plan 7 jours est chargé.
+        Propulsé par Anthropic Claude · Chaque envoi rappelle ton profil, tes macros et ton plan au modèle ; la conversation est conservée localement.
       </p>
     </section>
   )
