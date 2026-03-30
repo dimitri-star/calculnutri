@@ -7,49 +7,52 @@ const NAV = [
   { to: '/export', icon: '📥', label: 'Export CSV' },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ isMobile = false }) {
   return (
     <aside
       style={{
-        width: 248,
-        minHeight: '100vh',
+        width: isMobile ? '100%' : 248,
+        minHeight: isMobile ? 'auto' : '100vh',
         background: 'var(--card)',
         boxShadow: 'var(--shadow-soft)',
         display: 'flex',
-        flexDirection: 'column',
-        padding: '28px 0',
-        position: 'fixed',
+        flexDirection: isMobile ? 'row' : 'column',
+        padding: isMobile ? '8px 10px' : '28px 0',
+        position: isMobile ? 'sticky' : 'fixed',
         top: 0,
-        left: 0,
+        left: isMobile ? 'auto' : 0,
         zIndex: 10,
-        borderRadius: '0 28px 28px 0',
+        borderRadius: isMobile ? 0 : '0 28px 28px 0',
         border: '1px solid var(--line)',
-        borderLeft: 'none',
+        borderLeft: isMobile ? '1px solid var(--line)' : 'none',
+        borderRight: isMobile ? '1px solid var(--line)' : '1px solid var(--line)',
       }}
     >
       <div
         style={{
-          padding: '0 22px 28px',
-          borderBottom: '1px solid var(--line)',
+          padding: isMobile ? '2px 8px 2px 2px' : '0 22px 28px',
+          borderBottom: isMobile ? 'none' : '1px solid var(--line)',
+          borderRight: isMobile ? '1px solid var(--line)' : 'none',
+          marginRight: isMobile ? 8 : 0,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 14 }}>
           <div
             style={{
-              width: 48,
-              height: 48,
-              borderRadius: 16,
+              width: isMobile ? 34 : 48,
+              height: isMobile ? 34 : 48,
+              borderRadius: isMobile ? 10 : 16,
               background: 'var(--accent)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 22,
+              fontSize: isMobile ? 16 : 22,
               boxShadow: '0 6px 18px rgba(255, 122, 0, 0.35)',
             }}
           >
             🥗
           </div>
-          <div>
+          <div style={{ display: isMobile ? 'none' : 'block' }}>
             <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', letterSpacing: '-0.02em' }}>
               NutriCalc
             </div>
@@ -60,7 +63,16 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <nav style={{ padding: '20px 14px', flex: 1 }}>
+      <nav
+        style={{
+          padding: isMobile ? 0 : '20px 14px',
+          flex: 1,
+          display: isMobile ? 'flex' : 'block',
+          gap: isMobile ? 8 : 0,
+          overflowX: isMobile ? 'auto' : 'visible',
+          scrollbarWidth: 'none',
+        }}
+      >
         {NAV.map(({ to, icon, label }) => (
           <NavLink key={to} to={to} end={to === '/'} style={{ textDecoration: 'none' }}>
             {({ isActive }) => (
@@ -68,20 +80,22 @@ export default function Sidebar() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 12,
-                  padding: '14px 16px',
-                  borderRadius: 18,
-                  marginBottom: 6,
+                  gap: isMobile ? 6 : 12,
+                  padding: isMobile ? '8px 10px' : '14px 16px',
+                  borderRadius: isMobile ? 9999 : 18,
+                  marginBottom: isMobile ? 0 : 6,
                   background: isActive ? 'var(--accent-soft)' : 'transparent',
                   color: isActive ? 'var(--accent)' : 'var(--muted)',
-                  fontSize: 14,
+                  fontSize: isMobile ? 12 : 14,
                   fontWeight: isActive ? 700 : 500,
                   cursor: 'pointer',
                   transition: 'background 0.2s ease, color 0.2s ease',
                   border: isActive ? '1px solid var(--accent-border)' : '1px solid transparent',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                 }}
               >
-                <span style={{ fontSize: 18, lineHeight: 1 }}>{icon}</span>
+                <span style={{ fontSize: isMobile ? 14 : 18, lineHeight: 1 }}>{icon}</span>
                 {label}
               </div>
             )}
@@ -89,7 +103,8 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div
+      {!isMobile && (
+        <div
         style={{
           padding: '18px 22px',
           borderTop: '1px solid var(--line)',
@@ -103,6 +118,7 @@ export default function Sidebar() {
           </span>
         </div>
       </div>
+      )}
     </aside>
   )
 }

@@ -1,20 +1,30 @@
+import { useEffect, useState } from 'react'
 import Sidebar from './Sidebar.jsx'
 
 export default function Layout({ children }) {
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false))
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   return (
     <div
       style={{
         display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
         minHeight: '100vh',
         background: 'var(--page-bg)',
       }}
     >
-      <Sidebar />
+      <Sidebar isMobile={isMobile} />
       <main
         style={{
-          marginLeft: 248,
+          marginLeft: isMobile ? 0 : 248,
           flex: 1,
-          padding: '36px 44px 48px',
+          padding: isMobile ? '14px 12px 18px' : '36px 44px 48px',
           minHeight: '100vh',
           overflowY: 'auto',
         }}
