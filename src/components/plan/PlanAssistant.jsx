@@ -112,6 +112,7 @@ export default function PlanAssistant({
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [pendingImages, setPendingImages] = useState([])
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false))
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
   const fileInputRef = useRef(null)
@@ -119,6 +120,12 @@ export default function PlanAssistant({
   const hasPlan = weekPlan && typeof weekPlan === 'object' && Object.keys(weekPlan).length > 0
 
   const messagesMaxHeight = layout === 'page' ? 480 : 320
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -315,7 +322,7 @@ export default function PlanAssistant({
         borderRadius: 'var(--radius-card)',
         background: 'var(--card)',
         boxShadow: 'var(--shadow-soft)',
-        padding: '22px 26px 20px',
+        padding: isMobile ? '16px 14px 14px' : '22px 26px 20px',
         display: 'flex',
         flexDirection: 'column',
         gap: 0,
@@ -407,12 +414,12 @@ export default function PlanAssistant({
             transition={{ duration: 0.3 }}
             style={{
               alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-              maxWidth: 'min(92%, 900px)',
-              padding: '10px 14px',
+              maxWidth: isMobile ? '100%' : 'min(92%, 900px)',
+              padding: isMobile ? '9px 11px' : '10px 14px',
               borderRadius: msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
               background: msg.role === 'user' ? 'var(--accent-soft)' : 'var(--surface-input)',
               border: `1px solid ${msg.role === 'user' ? 'var(--accent-border)' : 'var(--line)'}`,
-              fontSize: 13,
+              fontSize: isMobile ? 12 : 13,
               lineHeight: 1.55,
               color: 'var(--text)',
               fontWeight: 500,
@@ -523,10 +530,11 @@ export default function PlanAssistant({
       <div
         style={{
           display: 'flex',
-          alignItems: 'center',
+          alignItems: isMobile ? 'stretch' : 'center',
+          flexWrap: isMobile ? 'wrap' : 'nowrap',
           gap: 10,
-          padding: '10px 12px 10px 14px',
-          borderRadius: 9999,
+          padding: isMobile ? '10px' : '10px 12px 10px 14px',
+          borderRadius: isMobile ? 16 : 9999,
           border: '1px solid var(--line)',
           background: 'var(--surface-input)',
         }}
@@ -549,7 +557,7 @@ export default function PlanAssistant({
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: 6,
+            padding: isMobile ? 8 : 6,
             border: 'none',
             borderRadius: 12,
             background: 'transparent',
@@ -575,12 +583,12 @@ export default function PlanAssistant({
           style={{
             flex: 1,
             minWidth: 0,
-            minHeight: 44,
+            minHeight: isMobile ? 40 : 44,
             maxHeight: 120,
-            padding: '10px 4px',
+            padding: isMobile ? '8px 4px' : '10px 4px',
             border: 'none',
             background: 'transparent',
-            fontSize: 14,
+            fontSize: isMobile ? 13 : 14,
             fontFamily: 'inherit',
             resize: 'none',
             outline: 'none',
@@ -595,8 +603,8 @@ export default function PlanAssistant({
           aria-label="Envoyer"
           style={{
             flexShrink: 0,
-            width: 46,
-            height: 46,
+            width: isMobile ? 42 : 46,
+            height: isMobile ? 42 : 46,
             borderRadius: '50%',
             border: 'none',
             cursor: sendDisabled ? 'not-allowed' : 'pointer',
@@ -620,8 +628,8 @@ export default function PlanAssistant({
               key={img.id}
               style={{
                 position: 'relative',
-                width: 68,
-                height: 68,
+                width: isMobile ? 56 : 68,
+                height: isMobile ? 56 : 68,
                 borderRadius: 12,
                 overflow: 'hidden',
                 border: '1px solid var(--line)',
