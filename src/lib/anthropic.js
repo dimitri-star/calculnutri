@@ -1,4 +1,5 @@
 import { DAYS } from '../constants/nutrition.js'
+import { migratePlanToNewFormat } from './migratePlan.js'
 
 const API_URL = 'https://api.anthropic.com/v1/messages'
 const MODEL = 'claude-sonnet-4-20250514'
@@ -19,7 +20,7 @@ const DEMO_ANALYSIS = `## ✅ Ce qui est BON dans ton alimentation actuelle
 **Magnésium** — Stress + sport épuisent rapidement les réserves. Solution : amandes, épinards, chocolat noir 85%.
 **Vitamine D** — Carence très fréquente. Solution : sardines, jaunes d'œuf, exposition solaire.`
 
-const DEMO_PLAN = {
+const DEMO_PLAN_LEGACY = {
   Lundi: {
     'Petit-déjeuner': { aliments: ['3 œufs brouillés', '150g fromage blanc 0%', '1 banane', '30g flocons d\'avoine'], calories: 520, proteines: 38, glucides: 52, lipides: 14 },
     'Déjeuner': { aliments: ['180g poulet grillé (cru)', '150g riz basmati (cru)', 'Salade verte', '1 cs huile d\'olive'], calories: 620, proteines: 45, glucides: 68, lipides: 14 },
@@ -63,6 +64,8 @@ const DEMO_PLAN = {
     'Dîner': { aliments: ['180g saumon (cru)', '200g lentilles cuites', 'Salade composée', '1 cs huile d\'olive'], calories: 580, proteines: 44, glucides: 42, lipides: 20 },
   },
 }
+
+const DEMO_PLAN = migratePlanToNewFormat(DEMO_PLAN_LEGACY)
 
 export async function callAnthropic(
   promptOrMessages,
@@ -119,7 +122,9 @@ export function parseWeekPlan(text) {
   try {
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('Pas de JSON trouvé')
-    return JSON.parse(jsonMatch[0])
+    const raw = JSON.parse(jsonMatch[0])
+    const migrated = migratePlanToNewFormat(raw)
+    return migrated && Object.keys(migrated).length > 0 ? migrated : getFallbackPlan()
   } catch {
     return getFallbackPlan()
   }
@@ -130,13 +135,29 @@ export function parseWeekPlanStrict(text) {
   try {
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return null
-    return JSON.parse(jsonMatch[0])
+    const raw = JSON.parse(jsonMatch[0])
+    return migratePlanToNewFormat(raw)
   } catch {
     return null
   }
 }
 
-const MEAL_KEYS = ['Petit-déjeuner', 'Déjeuner', 'Collation', 'Dîner']
+function mealEntryOk(meal) {
+  if (!meal || typeof meal !== 'object') return false
+  const a = meal.aliments
+  const hasFoods = Array.isArray(a) ? a.length > 0 : typeof a === 'string' && a.trim().length > 0
+  return hasFoods && ['calories', 'proteines', 'glucides', 'lipides'].every((k) => meal[k] != null && !Number.isNaN(Number(meal[k])))
+}
+
+function dayRepasComplete(day) {
+  return (
+    day &&
+    typeof day === 'object' &&
+    Array.isArray(day.repas) &&
+    day.repas.length > 0 &&
+    day.repas.every(mealEntryOk)
+  )
+}
 
 /**
  * Si le JSON a les 7 jours complets → remplace tout ; sinon fusionne jour par jour.
@@ -144,21 +165,18 @@ const MEAL_KEYS = ['Petit-déjeuner', 'Déjeuner', 'Collation', 'Dîner']
  */
 export function applyWeekPlanUpdate(parsed, previous) {
   if (!parsed || typeof parsed !== 'object' || !previous) return { plan: previous, changed: false }
-  const mealOk = (meal) => {
-    if (!meal || typeof meal !== 'object') return false
-    const a = meal.aliments
-    const hasFoods = Array.isArray(a) ? a.length > 0 : typeof a === 'string' && a.trim().length > 0
-    return hasFoods && ['calories', 'proteines', 'glucides', 'lipides'].every((k) => meal[k] != null && !Number.isNaN(Number(meal[k])))
-  }
-  const dayComplete = (day) =>
-    day && typeof day === 'object' && MEAL_KEYS.every((m) => mealOk(day[m]))
-  const allComplete = DAYS.every((d) => dayComplete(parsed[d]))
-  if (allComplete) return { plan: parsed, changed: true }
-  const merged = { ...previous }
+  const parsedN = migratePlanToNewFormat(parsed)
+  const prevN = migratePlanToNewFormat(previous)
+  if (!parsedN || !prevN) return { plan: previous, changed: false }
+
+  const allComplete = DAYS.every((d) => dayRepasComplete(parsedN[d]))
+  if (allComplete) return { plan: parsedN, changed: true }
+
+  const merged = { ...prevN }
   let changed = false
   for (const d of DAYS) {
-    if (dayComplete(parsed[d])) {
-      merged[d] = parsed[d]
+    if (dayRepasComplete(parsedN[d])) {
+      merged[d] = parsedN[d]
       changed = true
     }
   }
@@ -168,16 +186,15 @@ export function applyWeekPlanUpdate(parsed, previous) {
 function getFallbackPlan() {
   const meal = (cals, prot, carbs, lip) => ({
     aliments: ['Poulet 150g', 'Riz 100g', 'Légumes vapeur'],
-    calories: cals, proteines: prot, glucides: carbs, lipides: lip
+    calories: cals, proteines: prot, glucides: carbs, lipides: lip,
   })
   const day = () => ({
     'Petit-déjeuner': meal(400, 25, 45, 10),
-    'Déjeuner': meal(600, 40, 60, 15),
-    'Collation': meal(200, 15, 20, 5),
-    'Dîner': meal(500, 35, 40, 12),
+    Déjeuner: meal(600, 40, 60, 15),
+    Collation: meal(200, 15, 20, 5),
+    Dîner: meal(500, 35, 40, 12),
   })
-  return {
-    Lundi: day(), Mardi: day(), Mercredi: day(), Jeudi: day(),
-    Vendredi: day(), Samedi: day(), Dimanche: day(),
-  }
+  const legacy = {}
+  for (const d of DAYS) legacy[d] = day()
+  return migratePlanToNewFormat(legacy)
 }

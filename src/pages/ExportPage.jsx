@@ -1,6 +1,14 @@
 import useNutriStore from '../store/useNutriStore.js'
 import { generateCSV } from '../lib/export.js'
-import { DAYS, GOAL_LABELS, MEAL_COLORS } from '../constants/nutrition.js'
+import { DAYS, GOAL_LABELS } from '../constants/nutrition.js'
+
+function exportPreviewBadgeStyle(nom) {
+  const n = (nom || '').toLowerCase()
+  if (n.includes('déjeuner') && !n.includes('petit')) return { bg: '#E8F5E9', text: '#2E7D32' }
+  if (n.includes('petit')) return { bg: '#FFF8E1', text: '#F57C00' }
+  if (n.includes('dîner') || n.includes('soir')) return { bg: '#FFF3E0', text: '#E65100' }
+  return { bg: '#E3F2FD', text: '#1565C0' }
+}
 import Card from '../components/ui/Card.jsx'
 import Button from '../components/ui/Button.jsx'
 
@@ -137,8 +145,8 @@ export default function ExportPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {DAYS.map((day) => {
             const dayData = weekPlan[day] || {}
-            const meals = Object.keys(dayData)
-            const totalCal = meals.reduce((sum, m) => sum + (dayData[m]?.calories ?? 0), 0)
+            const repas = Array.isArray(dayData.repas) ? dayData.repas : []
+            const totalCal = repas.reduce((sum, r) => sum + (r.calories ?? 0), 0)
             return (
               <div
                 key={day}
@@ -154,11 +162,11 @@ export default function ExportPage() {
               >
                 <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', minWidth: 88 }}>{day}</span>
                 <div style={{ display: 'flex', gap: 8, flex: 1, flexWrap: 'wrap' }}>
-                  {meals.map((meal) => {
-                    const mc = MEAL_COLORS[meal] || {}
+                  {repas.map((r) => {
+                    const mc = exportPreviewBadgeStyle(r.nom)
                     return (
                       <span
-                        key={meal}
+                        key={r.id || r.nom}
                         style={{
                           padding: '6px 12px',
                           borderRadius: 9999,
@@ -169,7 +177,7 @@ export default function ExportPage() {
                           border: '1px solid var(--line)',
                         }}
                       >
-                        {mc.label || meal}
+                        {r.nom || 'Repas'}
                       </span>
                     )
                   })}
@@ -205,7 +213,7 @@ export default function ExportPage() {
           Actions
         </h3>
         <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-          <Button onClick={() => generateCSV(weekPlan, profile, results)} style={{ flex: '1 1 200px', justifyContent: 'center', padding: '14px 22px', borderRadius: 18 }}>
+          <Button onClick={() => generateCSV(weekPlan)} style={{ flex: '1 1 200px', justifyContent: 'center', padding: '14px 22px', borderRadius: 18 }}>
             📥 Télécharger le CSV
           </Button>
           <Button variant="secondary" onClick={() => window.print()} style={{ flex: '1 1 200px', justifyContent: 'center', padding: '14px 22px', borderRadius: 18 }}>

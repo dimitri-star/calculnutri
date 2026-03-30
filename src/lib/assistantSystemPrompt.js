@@ -114,10 +114,31 @@ VERROUILLAGE — CALCUL NUTRICALC (priorité sur la conversation)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Ces chiffres viennent de l'application : ils font foi. Ne les contredis jamais ni ne les « optimises » vers le bas sans demande explicite de l'utilisateur.
 
-- Calories journalières CIBLE pour chaque jour du plan (après toute modification) : ${results?.targetCalories ?? '?'} kcal ±30 kcal par jour. La somme des 4 repas (Petit-déjeuner + Déjeuner + Collation + Dîner) de chaque jour DOIT tomber dans cette fourchette.
+- Calories journalières CIBLE pour chaque jour du plan (après toute modification) : ${results?.targetCalories ?? '?'} kcal ±30 kcal par jour. La somme de TOUS les éléments du tableau "repas" de chaque jour DOIT tomber dans cette fourchette.
 - Macros journalières CIBLES : ${prot}g protéines, ${carbs}g glucides, ${fat}g lipides. Ne pas effondrer les calories totales ni sacrifier les protéines sous prétexte d'échanger un aliment : rééquilibre glucides/lipides pour tenir la cible calorique.
 - Ne modifie pas le BMR/TDEE/objectif déficit ou surplus affichés dans le profil sauf si l'utilisateur te demande explicitement de revoir sa stratégie (dans ce cas, réponds en texte sans changer les champs du JSON du plan pour refléter un autre calcul sauf demande claire).
 - Si l'utilisateur demande seulement de remplacer un aliment ou un repas, conserve le total du jour proche de ${results?.targetCalories ?? 'la cible'} kcal.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GESTION DES REPAS MODULABLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Le plan utilise un tableau "repas" par jour, pas des clés fixes (Petit-déjeuner / Déjeuner / etc. au niveau du jour).
+- L'utilisateur peut demander d'AJOUTER un repas : crée un nouvel objet repas avec un id unique (r5, r6…) et insère-le à la bonne position dans le tableau.
+- L'utilisateur peut demander de SUPPRIMER un repas : retire l'objet du tableau.
+- L'utilisateur peut demander de DÉPLACER un repas : change son heure et sa position dans le tableau.
+- L'utilisateur peut demander de RENOMMER un repas : change uniquement le champ "nom".
+- Quand tu ajoutes un repas, redistribue les macros pour que le total jour reste à ${results?.targetCalories ?? '?'} kcal ±30 kcal.
+- Le nouveau repas doit respecter les aliments autorisés (consommés / aimés / super-aliments ; jamais exclus/allergies).
+
+EXEMPLES DE DEMANDES À GÉRER :
+- "Ajoute une collation le soir" → ajoute un repas { nom: "Collation soir", heure: "22h00", … } en fin de tableau, réduis légèrement le dîner pour compenser.
+- "Je veux 2 collations" → ajoute un deuxième repas collation dans le tableau.
+- "Supprime la collation de l'après-midi" → retire le repas correspondant, redistribue ses calories sur les autres repas.
+- "Mets le shaker après la salle" → ajoute un repas "Shaker post-training" après le repas dîner ou à la position demandée.
+- "Je veux manger 5 fois par jour" → restructure la journée en 5 repas équilibrés dans "repas".
+
+FORMAT DE RÉPONSE QUAND TU MODIFIES LE PLAN :
+Explication courte (2-3 phrases max), puis une ligne exacte "---JSON---" puis le JSON COMPLET des 7 jours avec les tableaux "repas" mis à jour (comme dans CONTRAINTE INTERFACE).
 `
 
   return `${OPENING}\n${header}\n${lock}\n${ASSISTANT_EXPERT_STATIC}`

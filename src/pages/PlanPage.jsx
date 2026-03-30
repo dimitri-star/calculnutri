@@ -4,31 +4,30 @@ import useNutriStore from '../store/useNutriStore.js'
 import { callAnthropic, parseWeekPlan } from '../lib/anthropic.js'
 import { buildAnalysisPrompt, buildWeekPlanPrompt } from '../lib/prompts.js'
 import { analyzePDFProfile } from '../lib/analyzePDFProfile.js'
-import { DAYS, MEAL_COLORS, SUPERFOODS } from '../constants/nutrition.js'
+import { DAYS, SUPERFOODS } from '../constants/nutrition.js'
+import WeekPlanTable from '../components/plan/WeekPlanTable.jsx'
 import AnalysisResult from '../components/plan/AnalysisResult.jsx'
 import Card from '../components/ui/Card.jsx'
 import Button from '../components/ui/Button.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 
 function validateAndCorrectPlan(plan, results) {
-  const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
-  const meals = ['Petit-déjeuner', 'Déjeuner', 'Collation', 'Dîner']
-  const targetCals  = results.targetCalories
+  const targetCals = results.targetCalories
   const targetCarbs = results.carbs
 
-  days.forEach(day => {
+  DAYS.forEach((day) => {
     if (!plan[day]) return
+    const repas = plan[day].repas
+    if (!Array.isArray(repas)) return
     let dayCarbs = 0
-    let dayCals  = 0
-    meals.forEach(meal => {
-      const m = plan[day][meal]
-      if (!m) return
-      dayCarbs += m.glucides  || 0
-      dayCals  += m.calories  || 0
+    let dayCals = 0
+    repas.forEach((m) => {
+      dayCarbs += m.glucides || 0
+      dayCals += m.calories || 0
     })
     plan[day]._warnings = []
     const carbsDiff = Math.abs(dayCarbs - targetCarbs)
-    const calsDiff  = Math.abs(dayCals  - targetCals)
+    const calsDiff = Math.abs(dayCals - targetCals)
     if (carbsDiff > 15) {
       plan[day]._warnings.push(`⚠️ Glucides : ${dayCarbs}g vs ${targetCarbs}g cible (écart ${carbsDiff}g)`)
     }
@@ -417,103 +416,6 @@ function Step2({ onNext }) {
   )
 }
 
-function DayPlanReadOnly({ dayData }) {
-  const MEALS = ['Petit-déjeuner', 'Déjeuner', 'Collation', 'Dîner']
-  let totalCal = 0
-  let totalProt = 0
-  let totalCarbs = 0
-  let totalFat = 0
-
-  return (
-    <div>
-      <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-        <thead>
-          <tr style={{ borderBottom: '1px solid var(--line)' }}>
-            {['Repas', 'Aliments', 'Prot.', 'Gluc.', 'Lip.', 'Kcal'].map((h) => (
-              <th
-                key={h}
-                style={{
-                  padding: '10px 10px',
-                  textAlign: h === 'Repas' || h === 'Aliments' ? 'left' : 'right',
-                  color: 'var(--muted)',
-                  fontWeight: 700,
-                  fontSize: 10,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.12em',
-                }}
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {MEALS.map((meal) => {
-            const m = dayData?.[meal]
-            if (!m) return null
-            totalCal += m.calories ?? 0
-            totalProt += m.proteines ?? 0
-            totalCarbs += m.glucides ?? 0
-            totalFat += m.lipides ?? 0
-            const mc = MEAL_COLORS[meal] || {}
-            return (
-              <tr key={meal} style={{ borderBottom: '1px solid var(--line)' }}>
-                <td style={{ padding: '10px 10px', minWidth: 110 }}>
-                  <span style={{
-                    display: 'inline-block',
-                    padding: '6px 12px',
-                    borderRadius: 9999,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    background: mc.bg,
-                    color: mc.text,
-                  }}>
-                    {mc.label || meal}
-                  </span>
-                </td>
-                <td style={{ padding: '10px 10px', color: 'var(--text)', lineHeight: 1.5 }}>
-                  {Array.isArray(m.aliments) ? m.aliments.join(', ') : m.aliments}
-                </td>
-                <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: '"DM Mono", monospace', color: '#2E7D32', fontWeight: 600 }}>
-                  {m.proteines}g
-                </td>
-                <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: '"DM Mono", monospace', color: '#1565C0', fontWeight: 600 }}>
-                  {m.glucides}g
-                </td>
-                <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: '"DM Mono", monospace', color: '#6A1B9A', fontWeight: 600 }}>
-                  {m.lipides}g
-                </td>
-                <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: '"DM Mono", monospace', color: 'var(--accent)', fontWeight: 700 }}>
-                  {m.calories}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-        <tfoot>
-          <tr style={{ background: 'var(--surface-input)', borderTop: '2px solid var(--line)' }}>
-            <td style={{ padding: '10px 10px', fontWeight: 800, color: 'var(--text)', fontSize: 12 }}>TOTAL</td>
-            <td />
-            <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: '"DM Mono", monospace', color: '#2E7D32', fontWeight: 800 }}>{totalProt}g</td>
-            <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: '"DM Mono", monospace', color: '#1565C0', fontWeight: 800 }}>{totalCarbs}g</td>
-            <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: '"DM Mono", monospace', color: '#6A1B9A', fontWeight: 800 }}>{totalFat}g</td>
-            <td style={{ padding: '10px 10px', textAlign: 'right', fontFamily: '"DM Mono", monospace', color: 'var(--accent)', fontWeight: 800 }}>{totalCal}</td>
-          </tr>
-        </tfoot>
-      </table>
-      </div>
-      {dayData?._warnings?.length > 0 && (
-        <div className="day-warnings">
-          {dayData._warnings.map((w, i) => (
-            <div key={i} className="day-warning">{w}</div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
 function Step3() {
   const store = useNutriStore()
   const navigate = useNavigate()
@@ -577,31 +479,12 @@ function Step3() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-        {DAYS.map((day) => (
-          <button
-            key={day}
-            type="button"
-            onClick={() => store.setCurrentDay(day)}
-            style={{
-              padding: '8px 16px',
-              borderRadius: 9999,
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: 'pointer',
-              border: '1px solid',
-              borderColor: store.currentDay === day ? 'var(--accent-border)' : 'var(--line)',
-              background: store.currentDay === day ? 'var(--accent-soft)' : 'var(--surface-input)',
-              color: store.currentDay === day ? 'var(--accent)' : 'var(--muted)',
-              transition: 'all 0.15s',
-              fontFamily: 'inherit',
-            }}
-          >
-            {day}
-          </button>
-        ))}
-      </div>
-      <DayPlanReadOnly dayData={store.weekPlan[store.currentDay]} />
+      <WeekPlanTable
+        plan={store.weekPlan}
+        macros={{ calories: store.results.targetCalories, carbs: store.results.carbs }}
+        currentDay={store.currentDay}
+        onDayChange={store.setCurrentDay}
+      />
     </Card>
   )
 }

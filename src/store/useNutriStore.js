@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { migratePlanToNewFormat } from '../lib/migratePlan.js'
 
 export const DEFAULT_COACH_MESSAGES = [
   {
@@ -68,7 +69,10 @@ const useNutriStore = create(
       setFoods: (foods) => set((s) => ({ foods: { ...s.foods, ...foods } })),
       setPlanPrefs: (planPrefs) => set((s) => ({ planPrefs: { ...s.planPrefs, ...planPrefs } })),
       setAnalysis: (analysis) => set({ analysis }),
-      setWeekPlan: (weekPlan) => set({ weekPlan }),
+      setWeekPlan: (weekPlan) =>
+        set({
+          weekPlan: weekPlan == null ? null : migratePlanToNewFormat(weekPlan),
+        }),
       setCurrentDay: (currentDay) => set({ currentDay }),
 
       setAssistantMessages: (fnOrMessages) =>
@@ -97,7 +101,14 @@ const useNutriStore = create(
         assistantMessages: DEFAULT_COACH_MESSAGES.map((m) => ({ ...m })),
       }),
     }),
-    { name: 'nutri-calc-store' }
+    {
+      name: 'nutri-calc-store',
+      onRehydrateStorage: () => (state) => {
+        if (state?.weekPlan) {
+          state.weekPlan = migratePlanToNewFormat(state.weekPlan)
+        }
+      },
+    }
   )
 )
 

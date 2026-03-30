@@ -7,6 +7,9 @@ import { callAnthropic, parseWeekPlanStrict, applyWeekPlanUpdate } from '../../l
 import { buildAssistantSystemPrompt } from '../../lib/assistantSystemPrompt.js'
 import { DAYS } from '../../constants/nutrition.js'
 
+const MAX_IMAGES = 4
+const MAX_IMAGE_MB = 5
+
 const EXPERT_PROMPTS = [
   { pill: 'Timing & entraînement', message: 'Comment structurer mes repas autour de la musculation (pré et post séance) pour la perf et la récup ?' },
   { pill: 'Sommeil & récup', message: 'Quels repères alimentaires ou habitudes peuvent aider le sommeil et la récup musculaire ?' },
@@ -22,15 +25,15 @@ const PLAN_PROMPTS = [
   { pill: 'Équilibrer la semaine', message: 'Échange ou décale les repas les plus caloriques entre les jours pour mieux équilibrer la semaine.' },
 ]
 
-/** Démo : remplace un repas "lourd" (ex. canard) par du poisson, ou le dîner du samedi. */
+/** Démo : remplace un repas "lourd" (ex. canard) par du poisson, ou le repas du soir du samedi. */
 function demoReschedulePlan(weekPlan) {
   const copy = JSON.parse(JSON.stringify(weekPlan || {}))
   const needle = /canard|magret|duck/i
   for (const d of DAYS) {
     const day = copy[d]
     if (!day) continue
-    for (const mk of ['Dîner', 'Déjeuner', 'Collation', 'Petit-déjeuner']) {
-      const meal = day[mk]
+    const repas = Array.isArray(day.repas) ? day.repas : []
+    for (const meal of repas) {
       if (!meal?.aliments) continue
       const joined = Array.isArray(meal.aliments) ? meal.aliments.join(' ') : String(meal.aliments)
       if (needle.test(joined)) {
@@ -39,23 +42,27 @@ function demoReschedulePlan(weekPlan) {
         meal.glucides = Math.round(Number(meal.glucides) || 35)
         meal.lipides = Math.round(Number(meal.lipides) || 14)
         meal.calories = Math.round(Number(meal.calories) || 520)
+        const label = meal.nom || 'repas'
         return {
           plan: copy,
-          msg: `Exemple démo : j'ai remplacé ce repas (canard / magret) par du cabillaud et des accompagnements sur ${d} (${mk}). Avec ta clé API, dis-moi simplement ce que tu n'aimes pas et j'adapte toute la semaine.`,
+          msg: `Exemple démo : j'ai remplacé ce repas (canard / magret) par du cabillaud et des accompagnements sur ${d} (${label}). Avec ta clé API, dis-moi simplement ce que tu n'aimes pas et j'adapte toute la semaine.`,
         }
       }
     }
   }
-  if (copy.Samedi?.Dîner) {
-    const m = copy.Samedi.Dîner
-    m.aliments = ["180g saumon (cru)", "Riz complet 100g (cru)", "Brocoli vapeur", "1 cs huile d'olive"]
-    m.calories = 560
-    m.proteines = 42
-    m.glucides = 52
-    m.lipides = 18
+  const sat = copy.Samedi
+  const satRepas = Array.isArray(sat?.repas) ? sat.repas : []
+  const dinner =
+    satRepas.find((r) => /dîner|soir/i.test(String(r?.nom || ''))) || satRepas[satRepas.length - 1]
+  if (dinner) {
+    dinner.aliments = ["180g saumon (cru)", "Riz complet 100g (cru)", "Brocoli vapeur", "1 cs huile d'olive"]
+    dinner.calories = 560
+    dinner.proteines = 42
+    dinner.glucides = 52
+    dinner.lipides = 18
     return {
       plan: copy,
-      msg: "Exemple démo : j'ai réorganisé le dîner du samedi (saumon, riz, légumes). Configure VITE_ANTHROPIC_API_KEY pour que je réponde à tes vraies préférences sur tout le plan.",
+      msg: "Exemple démo : j'ai réorganisé le repas du soir du samedi (saumon, riz, légumes). Configure VITE_ANTHROPIC_API_KEY pour que je réponde à tes vraies préférences sur tout le plan.",
     }
   }
   return {
@@ -64,12 +71,27 @@ function demoReschedulePlan(weekPlan) {
   }
 }
 
-function buildApiMessagesFromStore() {
+function buildApiMessagesFromStore(currentUserContent = null) {
   const list = useNutriStore.getState().assistantMessages
-  return list
+  const messages = list
     .filter((m) => m.role === 'user' || m.role === 'assistant')
     .slice(1)
     .map((m) => ({ role: m.role, content: m.content }))
+  if (currentUserContent) messages.push({ role: 'user', content: currentUserContent })
+  return messages
+}
+
+function toBase64Payload(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const full = String(reader.result || '')
+      const base64 = full.includes(',') ? full.split(',')[1] : full
+      resolve(base64)
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
 }
 
 /**
@@ -89,12 +111,61 @@ export default function PlanAssistant({
 
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [pendingImages, setPendingImages] = useState([])
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   const hasPlan = weekPlan && typeof weekPlan === 'object' && Object.keys(weekPlan).length > 0
 
   const messagesMaxHeight = layout === 'page' ? 480 : 320
+
+  useEffect(() => {
+    return () => {
+      pendingImages.forEach((img) => URL.revokeObjectURL(img.previewUrl))
+    }
+  }, [pendingImages])
+
+  async function handleImagePick(event) {
+    const files = Array.from(event.target.files || [])
+    event.target.value = ''
+    if (!files.length) return
+
+    const remain = MAX_IMAGES - pendingImages.length
+    if (remain <= 0) {
+      window.alert(`Tu peux envoyer au maximum ${MAX_IMAGES} images par message.`)
+      return
+    }
+
+    const valid = files.slice(0, remain)
+    const additions = []
+    for (const file of valid) {
+      if (!file.type.startsWith('image/')) continue
+      if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
+        window.alert(`Image trop lourde (${file.name}). Limite : ${MAX_IMAGE_MB} Mo.`)
+        continue
+      }
+      const data = await toBase64Payload(file)
+      additions.push({
+        id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
+        name: file.name,
+        mediaType: file.type,
+        data,
+        previewUrl: URL.createObjectURL(file),
+      })
+    }
+    if (additions.length) {
+      setPendingImages((prev) => [...prev, ...additions].slice(0, MAX_IMAGES))
+    }
+  }
+
+  function removePendingImage(id) {
+    setPendingImages((prev) => {
+      const img = prev.find((x) => x.id === id)
+      if (img?.previewUrl) URL.revokeObjectURL(img.previewUrl)
+      return prev.filter((x) => x.id !== id)
+    })
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -102,9 +173,14 @@ export default function PlanAssistant({
 
   async function handleSend() {
     const text = input.trim()
-    if (!text || loading) return
+    if ((!text && pendingImages.length === 0) || loading) return
     setInput('')
-    setAssistantMessages((m) => [...m, { role: 'user', content: text }])
+    const imageNote =
+      pendingImages.length > 0
+        ? `\n\n📎 ${pendingImages.length} image(s) jointe(s) : ${pendingImages.map((x) => x.name).join(', ')}`
+        : ''
+    const userEcho = text || "Analyse l'image jointe du plan alimentaire et corrige les erreurs."
+    setAssistantMessages((m) => [...m, { role: 'user', content: `${userEcho}${imageNote}`.trim() }])
     setLoading(true)
 
     const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
@@ -124,13 +200,48 @@ export default function PlanAssistant({
           ])
           return
         }
+        if (pendingImages.length > 0) {
+          setAssistantMessages((m) => [
+            ...m,
+            {
+              role: 'assistant',
+              content:
+                "J'ai bien reçu tes images, mais en mode démo je ne peux pas les analyser. Ajoute `VITE_ANTHROPIC_API_KEY` dans `.env` et je pourrai vérifier les erreurs de ton plan à partir des captures.",
+            },
+          ])
+          return
+        }
         const { plan, msg } = demoReschedulePlan(weekPlan)
         setWeekPlan?.(plan)
         setAssistantMessages((m) => [...m, { role: 'assistant', content: msg }])
         return
       }
 
-      const apiMessages = buildApiMessagesFromStore()
+      const currentUserContent = []
+      if (text) currentUserContent.push({ type: 'text', text })
+      if (pendingImages.length > 0) {
+        for (const img of pendingImages) {
+          currentUserContent.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: img.mediaType || 'image/png',
+              data: img.data,
+            },
+          })
+        }
+        currentUserContent.push({
+          type: 'text',
+          text:
+            "Analyse précisément la capture du plan affiché dans l'app, détecte les écarts kcal/macros/structure, puis propose la correction la plus fiable.",
+        })
+      }
+
+      const apiMessages = buildApiMessagesFromStore(
+        currentUserContent.length === 1 && currentUserContent[0].type === 'text'
+          ? currentUserContent[0].text
+          : currentUserContent
+      )
 
       const systemPrompt = buildAssistantSystemPrompt({
         profile: profile ?? {},
@@ -168,11 +279,13 @@ export default function PlanAssistant({
     } catch (e) {
       setAssistantMessages((m) => [...m, { role: 'assistant', content: `Erreur : ${e.message || String(e)}` }])
     } finally {
+      pendingImages.forEach((img) => URL.revokeObjectURL(img.previewUrl))
+      setPendingImages([])
       setLoading(false)
     }
   }
 
-  const sendDisabled = loading || !input.trim()
+  const sendDisabled = loading || (!input.trim() && pendingImages.length === 0)
 
   const chipBase = {
     padding: '8px 14px',
@@ -418,10 +531,19 @@ export default function PlanAssistant({
           background: 'var(--surface-input)',
         }}
       >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleImagePick}
+          style={{ display: 'none' }}
+        />
         <button
           type="button"
-          aria-label="Pièce jointe (bientôt)"
-          disabled
+          aria-label="Joindre des images"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={loading}
           style={{
             flexShrink: 0,
             display: 'inline-flex',
@@ -432,8 +554,8 @@ export default function PlanAssistant({
             borderRadius: 12,
             background: 'transparent',
             color: 'var(--muted)',
-            cursor: 'not-allowed',
-            opacity: 0.5,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.5 : 1,
           }}
         >
           <Paperclip size={20} strokeWidth={2} />
@@ -491,6 +613,51 @@ export default function PlanAssistant({
           <Send size={20} strokeWidth={2.25} />
         </button>
       </div>
+      {pendingImages.length > 0 && (
+        <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {pendingImages.map((img) => (
+            <div
+              key={img.id}
+              style={{
+                position: 'relative',
+                width: 68,
+                height: 68,
+                borderRadius: 12,
+                overflow: 'hidden',
+                border: '1px solid var(--line)',
+                background: 'var(--surface-input)',
+              }}
+            >
+              <img
+                src={img.previewUrl}
+                alt={img.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              <button
+                type="button"
+                onClick={() => removePendingImage(img.id)}
+                aria-label={`Retirer ${img.name}`}
+                style={{
+                  position: 'absolute',
+                  top: 2,
+                  right: 2,
+                  width: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  border: 'none',
+                  background: 'rgba(0,0,0,0.65)',
+                  color: '#fff',
+                  fontSize: 11,
+                  lineHeight: 1,
+                  cursor: 'pointer',
+                }}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <p
         style={{

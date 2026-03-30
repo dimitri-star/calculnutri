@@ -145,21 +145,29 @@ Betteraves 100g          =  2P | 10G | 0L  |  43 kcal
 Carottes 150g            =  1P | 13G | 0L  |  58 kcal
 Miel 10g                 =  0P |  8G | 0L  |  31 kcal
 
+NOMBRE DE REPAS : L'utilisateur peut avoir entre 3 et 6 repas par jour.
+Par défaut génère 4 repas dans le tableau "repas". Si les notes mentionnent une collation supplémentaire ou un shaker, ajoute un repas.
+Nomme les repas de façon naturelle selon l'heure : "Petit-déjeuner", "Déjeuner", "Collation pré-training", "Dîner", "Collation soir", etc.
+Chaque repas a un "id" unique par jour : r1, r2, r3, r4 (puis r5, r6 si besoin), un champ "heure" indicatif, et les macros.
+
+RÉPARTITION INDICATIVE (4 repas par défaut — répartis sur le tableau dans l'ordre chronologique) :
+- Repas 1 type matin ≈ ${bfCals} kcal | ${bfProt}g P | ${bfCarbs}g G | ${bfFat}g L
+- Repas 2 type midi ≈ ${lunchCals} kcal | ${lunchProt}g P | ${lunchCarbs}g G | ${lunchFat}g L
+- Repas 3 type collation ≈ ${snackCals} kcal | ${snackProt}g P | ${snackCarbs}g G | ${snackFat}g L
+- Repas 4 type soir ≈ ${dinnerCals} kcal | ${dinnerProt}g P | ${dinnerCarbs}g G | ${dinnerFat}g L
+
 ━━━ PROCÉDURE OBLIGATOIRE AVANT DE RÉPONDRE ━━━
-Pour CHAQUE repas de CHAQUE jour, VÉRIFIE :
-1. Calcule les glucides du repas : somme de tous les glucides des aliments
-2. Compare à la cible glucides du repas (ex: ${bfCarbs}g pour le matin)
-3. Si écart > 5g : AJUSTE les quantités de féculents (riz, flocons, patate douce)
-4. Calcule le total jour : somme des 4 repas
-5. Vérifie que glucides total = ${carbs}g ±5g
-6. Vérifie que calories total = ${cal} kcal ±30 kcal
-7. Si l'écart est trop grand : recommence ce repas
+Pour CHAQUE jour, VÉRIFIE :
+1. Pour chaque entrée du tableau "repas", calcule glucides et calories du repas (cohérent avec les aliments)
+2. Somme de TOUS les repas du jour : glucides = ${carbs}g ±5g, calories = ${cal} kcal ±30 kcal, protéines ≈ ${prot}g, lipides ≈ ${fat}g
+3. Si écart trop grand : ajuste les quantités (féculents, huiles) sur un ou plusieurs repas
+4. ids uniques r1, r2… dans l'ordre du tableau
 
 RÈGLES :
 - Quantités TOUJOURS en CRU pour viandes et féculents
 - Varie les protéines du soir (pas la même 2 soirs de suite)
 - Uniquement aliments naturels non transformés
-- Les dattes : toujours en collation pré-training (jamais le matin)
+- Les dattes : en collation pré-training de préférence (pas le matin au réveil)
 - Utilise les aliments autorisés en PRIORITÉ ABSOLUE
 
 ━━━ FORMAT DE RÉPONSE ━━━
@@ -167,41 +175,57 @@ JSON BRUT UNIQUEMENT. Aucun texte avant ou après. Aucun markdown.
 
 {
   "Lundi": {
-    "Petit-déjeuner": {
-      "aliments": ["3 oeufs entiers", "150g fromage blanc 0%", "60g flocons d'avoine", "1 banane (120g)"],
-      "calories": ${bfCals},
-      "proteines": ${bfProt},
-      "glucides": ${bfCarbs},
-      "lipides": ${bfFat}
-    },
-    "Déjeuner": {
-      "aliments": ["180g poulet CRU", "115g riz basmati CRU", "200g brocolis", "10ml huile d'olive"],
-      "calories": ${lunchCals},
-      "proteines": ${lunchProt},
-      "glucides": ${lunchCarbs},
-      "lipides": ${lunchFat}
-    },
-    "Collation": {
-      "aliments": ["2 dattes (30g)", "30g amandes", "1 kiwi (80g)"],
-      "calories": ${snackCals},
-      "proteines": ${snackProt},
-      "glucides": ${snackCarbs},
-      "lipides": ${snackFat}
-    },
-    "Dîner": {
-      "aliments": ["170g steak haché 5% CRU", "200g patate douce CRU", "200g courgettes", "2 oeufs entiers"],
-      "calories": ${dinnerCals},
-      "proteines": ${dinnerProt},
-      "glucides": ${dinnerCarbs},
-      "lipides": ${dinnerFat}
-    }
+    "repas": [
+      {
+        "id": "r1",
+        "nom": "Petit-déjeuner",
+        "heure": "7h30",
+        "aliments": ["3 oeufs entiers", "150g fromage blanc 0%", "60g flocons d'avoine", "1 banane (120g)"],
+        "calories": ${bfCals},
+        "proteines": ${bfProt},
+        "glucides": ${bfCarbs},
+        "lipides": ${bfFat}
+      },
+      {
+        "id": "r2",
+        "nom": "Déjeuner",
+        "heure": "12h00",
+        "aliments": ["180g poulet CRU", "115g riz basmati CRU", "200g brocolis", "10ml huile d'olive"],
+        "calories": ${lunchCals},
+        "proteines": ${lunchProt},
+        "glucides": ${lunchCarbs},
+        "lipides": ${lunchFat}
+      },
+      {
+        "id": "r3",
+        "nom": "Collation pré-training",
+        "heure": "15h30",
+        "aliments": ["2 dattes (30g)", "30g amandes", "1 kiwi (80g)"],
+        "calories": ${snackCals},
+        "proteines": ${snackProt},
+        "glucides": ${snackCarbs},
+        "lipides": ${snackFat}
+      },
+      {
+        "id": "r4",
+        "nom": "Dîner",
+        "heure": "20h00",
+        "aliments": ["170g steak haché 5% CRU", "200g patate douce CRU", "200g courgettes", "2 oeufs entiers"],
+        "calories": ${dinnerCals},
+        "proteines": ${dinnerProt},
+        "glucides": ${dinnerCarbs},
+        "lipides": ${dinnerFat}
+      }
+    ]
   },
-  "Mardi": {},
-  "Mercredi": {},
-  "Jeudi": {},
-  "Vendredi": {},
-  "Samedi": {},
-  "Dimanche": {}
-}`
+  "Mardi": { "repas": [ ... ] },
+  "Mercredi": { "repas": [ ... ] },
+  "Jeudi": { "repas": [ ... ] },
+  "Vendredi": { "repas": [ ... ] },
+  "Samedi": { "repas": [ ... ] },
+  "Dimanche": { "repas": [ ... ] }
+}
+
+Remplis chaque jour avec un tableau "repas" complet (3 à 6 entrées), pas des clés fixes par nom de repas.`
 }
 
