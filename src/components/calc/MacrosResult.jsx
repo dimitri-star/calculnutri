@@ -1,5 +1,6 @@
 import useNutriStore from '../../store/useNutriStore.js'
 import { GOAL_LABELS } from '../../constants/nutrition.js'
+import useIsMobile from '../../hooks/useIsMobile.js'
 
 function MacroBox({ label, value, unit, color, bgColor }) {
   return (
@@ -73,6 +74,7 @@ function CalTarget({ label, value, isHighlighted }) {
 
 export default function MacrosResult() {
   const { results, profile } = useNutriStore()
+  const isMobile = useIsMobile()
   if (!results.tdee) return null
 
   const goalLabel = GOAL_LABELS[profile.goal] || profile.goal
@@ -115,7 +117,7 @@ export default function MacrosResult() {
         </div>
         <div
           style={{
-            fontSize: 56,
+            fontSize: isMobile ? 44 : 56,
             fontWeight: 800,
             color: 'var(--accent)',
             fontFamily: '"DM Mono", monospace',
@@ -172,7 +174,7 @@ export default function MacrosResult() {
         >
           Macros pour {goalLabel}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 10 }}>
           <MacroBox label="Calories" value={results.targetCalories} unit="kcal" color="#E65100" bgColor="#FFF3E0" />
           <MacroBox label="Protéines" value={`${results.prot}g`} unit={`${results.prot * 4} kcal`} color="#2E7D32" bgColor="#E8F5E9" />
           <MacroBox label="Glucides" value={`${results.carbs}g`} unit={`${results.carbs * 4} kcal`} color="#1565C0" bgColor="#E3F2FD" />

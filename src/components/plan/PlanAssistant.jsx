@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 // eslint-disable-next-line no-unused-vars -- motion used as <motion.div /> etc.
 import { motion } from 'framer-motion'
 import { Paperclip, Send } from 'lucide-react'
@@ -109,6 +110,7 @@ export default function PlanAssistant({
   const setAssistantMessages = useNutriStore((s) => s.setAssistantMessages)
   const resetCoachMessages = useNutriStore((s) => s.resetCoachMessages)
 
+  const location = useLocation()
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [pendingImages, setPendingImages] = useState([])
@@ -116,6 +118,7 @@ export default function PlanAssistant({
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
   const fileInputRef = useRef(null)
+  const prefillHandled = useRef(false)
 
   const hasPlan = weekPlan && typeof weekPlan === 'object' && Object.keys(weekPlan).length > 0
 
@@ -127,9 +130,34 @@ export default function PlanAssistant({
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
+  // Pre-fill from body analysis page navigation state
+  useEffect(() => {
+    if (prefillHandled.current) return
+    const state = location?.state
+    if (!state?.prefillText && !state?.prefillImages) return
+    prefillHandled.current = true
+
+    if (state.prefillText) setInput(state.prefillText)
+
+    if (state.prefillImages?.length > 0) {
+      const images = state.prefillImages.map((img, i) => ({
+        id: `prefill-${i}-${Date.now()}`,
+        name: img.name || `photo-${i + 1}`,
+        mediaType: img.mediaType,
+        data: img.data,
+        previewUrl: null,
+      }))
+      setPendingImages(images)
+    }
+
+    // Clear navigation state so it doesn't re-trigger on back/forward
+    window.history.replaceState({}, '')
+    setTimeout(() => inputRef.current?.focus(), 100)
+  }, [location?.state])
+
   useEffect(() => {
     return () => {
-      pendingImages.forEach((img) => URL.revokeObjectURL(img.previewUrl))
+      pendingImages.forEach((img) => { if (img?.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(img.previewUrl) })
     }
   }, [pendingImages])
 
@@ -169,7 +197,7 @@ export default function PlanAssistant({
   function removePendingImage(id) {
     setPendingImages((prev) => {
       const img = prev.find((x) => x.id === id)
-      if (img?.previewUrl) URL.revokeObjectURL(img.previewUrl)
+      if (img?.previewUrl && img.previewUrl.startsWith('blob:')) URL.revokeObjectURL(img.previewUrl)
       return prev.filter((x) => x.id !== id)
     })
   }
@@ -286,7 +314,7 @@ export default function PlanAssistant({
     } catch (e) {
       setAssistantMessages((m) => [...m, { role: 'assistant', content: `Erreur : ${e.message || String(e)}` }])
     } finally {
-      pendingImages.forEach((img) => URL.revokeObjectURL(img.previewUrl))
+      pendingImages.forEach((img) => { if (img?.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(img.previewUrl) })
       setPendingImages([])
       setLoading(false)
     }

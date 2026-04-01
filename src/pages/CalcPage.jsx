@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import useIsMobile from '../hooks/useIsMobile.js'
 import useNutriStore from '../store/useNutriStore.js'
 import { calcAll, calcTargets, calcMacros } from '../lib/tdee.js'
 import ProfileForm from '../components/calc/ProfileForm.jsx'
@@ -29,19 +30,20 @@ export default function CalcPage() {
   }, [profile.delta, profile.goal]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const isComplete = profile.age && profile.weight && profile.height
+  const isMobile = useIsMobile()
 
   return (
     <div style={{ maxWidth: 960 }}>
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', marginBottom: 8, letterSpacing: '-0.02em' }}>
+      <div style={{ marginBottom: isMobile ? 20 : 32 }}>
+        <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, color: 'var(--text)', marginBottom: 6, letterSpacing: '-0.02em' }}>
           Calcul calorique
         </h1>
-        <p style={{ fontSize: 15, color: 'var(--muted)', fontWeight: 500, maxWidth: 520, lineHeight: 1.55 }}>
-          Calcule tes besoins journaliers en calories et macros selon ton profil et ton activité.
+        <p style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500, lineHeight: 1.55 }}>
+          Calcule tes besoins journaliers en calories et macros.
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 16 : 24 }}>
         {/* Colonne gauche : formulaires */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <Card>
@@ -66,7 +68,7 @@ export default function CalcPage() {
               <MacrosResult />
               <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid var(--line)' }}>
                 <Button
-                  onClick={() => navigate('/plan')}
+                  onClick={() => navigate('/app/plan')}
                   style={{ width: '100%', justifyContent: 'center', padding: '14px 22px', fontSize: 15, borderRadius: 18 }}
                 >
                   Créer mon plan alimentaire →

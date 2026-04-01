@@ -5,6 +5,7 @@ import CalcPage from './pages/CalcPage.jsx'
 import PlanPage from './pages/PlanPage.jsx'
 import ExportPage from './pages/ExportPage.jsx'
 import AssistantPage from './pages/AssistantPage.jsx'
+import BodyAnalysisPage from './pages/BodyAnalysisPage.jsx'
 import LandingPage from './pages/LandingPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import ProtectedRoute from './components/auth/ProtectedRoute.jsx'
@@ -57,6 +58,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <Layout>
               <ExportPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/app/body"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <BodyAnalysisPage />
             </Layout>
           </ProtectedRoute>
         }

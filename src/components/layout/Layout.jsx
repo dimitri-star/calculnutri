@@ -24,7 +24,7 @@ export default function Layout({ children }) {
         style={{
           marginLeft: isMobile ? 0 : 248,
           flex: 1,
-          padding: isMobile ? '14px 12px 18px' : '36px 44px 48px',
+          padding: isMobile ? '20px 16px 88px' : '36px 44px 48px',
           minHeight: '100vh',
           overflowY: 'auto',
         }}

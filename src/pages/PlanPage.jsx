@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import useIsMobile from '../hooks/useIsMobile.js'
 import useNutriStore from '../store/useNutriStore.js'
 import { callAnthropic, parseWeekPlan } from '../lib/anthropic.js'
 import { buildAnalysisPrompt, buildWeekPlanPrompt } from '../lib/prompts.js'
@@ -48,18 +49,19 @@ function fileToBase64(file) {
 }
 
 function StepIndicator({ current }) {
+  const isMobile = useIsMobile()
   const steps = [
     { n: 1, label: 'Dossier profil' },
     { n: 2, label: 'Analyse IA' },
     { n: 3, label: 'Plan 7 jours' },
   ]
   return (
-    <div style={{ display: 'flex', gap: 0, marginBottom: 32, alignItems: 'center' }}>
+    <div style={{ display: 'flex', gap: 0, marginBottom: isMobile ? 20 : 32, alignItems: 'center' }}>
       {steps.map((s, i) => (
         <div key={s.n} style={{ display: 'flex', alignItems: 'center', flex: i < steps.length - 1 ? 1 : 'none' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 10 }}>
             <div style={{
-              width: 32, height: 32, borderRadius: '50%',
+              width: isMobile ? 28 : 32, height: isMobile ? 28 : 32, borderRadius: '50%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 12, fontWeight: 800,
               background: current >= s.n ? 'var(--accent)' : 'var(--surface-input)',
@@ -70,17 +72,19 @@ function StepIndicator({ current }) {
             }}>
               {current > s.n ? '✓' : s.n}
             </div>
-            <span style={{
-              fontSize: 13, fontWeight: current === s.n ? 700 : 500,
-              color: current >= s.n ? 'var(--text)' : 'var(--muted)',
-              whiteSpace: 'nowrap',
-            }}>
-              {s.label}
-            </span>
+            {!isMobile && (
+              <span style={{
+                fontSize: 13, fontWeight: current === s.n ? 700 : 500,
+                color: current >= s.n ? 'var(--text)' : 'var(--muted)',
+                whiteSpace: 'nowrap',
+              }}>
+                {s.label}
+              </span>
+            )}
           </div>
           {i < steps.length - 1 && (
             <div style={{
-              height: 2, flex: 1, margin: '0 14px', borderRadius: 2,
+              height: 2, flex: 1, margin: isMobile ? '0 8px' : '0 14px', borderRadius: 2,
               background: current > s.n ? 'var(--accent)' : 'var(--line)',
             }} />
           )}
@@ -464,17 +468,19 @@ function Step3() {
 
   return (
     <Card>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22, flexWrap: 'wrap', gap: 12 }}>
-        <h3 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>Plan 7 jours</h3>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-          <Button variant="ghost" onClick={() => navigate('/assistant')} style={{ fontSize: 13, padding: '10px 18px' }}>
-            🤖 Coach IA
-          </Button>
-          <Button variant="secondary" onClick={handleGenerate} disabled={loading} style={{ fontSize: 13, padding: '10px 18px' }}>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 8 }}>
+          <h3 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>Plan 7 jours</h3>
+          <Button variant="secondary" onClick={handleGenerate} disabled={loading} style={{ fontSize: 12, padding: '8px 14px' }}>
             {loading ? '...' : '↺ Régénérer'}
           </Button>
-          <Button onClick={() => navigate('/export')} style={{ fontSize: 13, padding: '10px 18px' }}>
-            📥 Exporter en CSV
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Button variant="ghost" onClick={() => navigate('/app/assistant')} style={{ fontSize: 12, padding: '8px 14px', flex: '1 1 auto' }}>
+            🤖 Coach IA
+          </Button>
+          <Button onClick={() => navigate('/app/export')} style={{ fontSize: 12, padding: '8px 14px', flex: '1 1 auto' }}>
+            📥 Exporter CSV
           </Button>
         </div>
       </div>
@@ -491,6 +497,7 @@ function Step3() {
 
 export default function PlanPage() {
   const store = useNutriStore()
+  const isMobile = useIsMobile()
   const { analysis, weekPlan } = store
   const [step, setStep] = useState(() => {
     if (weekPlan) return 3
@@ -508,21 +515,23 @@ export default function PlanPage() {
 
   return (
     <div style={{ maxWidth: 1200 }}>
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+      <div style={{ marginBottom: isMobile ? 16 : 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', marginBottom: 8, letterSpacing: '-0.02em' }}>Plan alimentaire</h1>
-          <p style={{ fontSize: 15, color: 'var(--muted)', fontWeight: 500, maxWidth: 480, lineHeight: 1.55 }}>
-            Génère ton plan 7 jours personnalisé avec l&apos;IA.
-          </p>
+          <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, color: 'var(--text)', marginBottom: 6, letterSpacing: '-0.02em' }}>Plan alimentaire</h1>
+          {!isMobile && (
+            <p style={{ fontSize: 15, color: 'var(--muted)', fontWeight: 500, maxWidth: 480, lineHeight: 1.55 }}>
+              Génère ton plan 7 jours personnalisé avec l&apos;IA.
+            </p>
+          )}
         </div>
         {(analysis || weekPlan) && (
           <button onClick={handleReset} style={{
             background: 'none', border: '1px solid rgba(229,57,53,0.3)', borderRadius: 9999,
-            color: '#e53935', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-            padding: '8px 16px', fontFamily: 'inherit', whiteSpace: 'nowrap',
+            color: '#e53935', cursor: 'pointer', fontSize: isMobile ? 12 : 13, fontWeight: 600,
+            padding: isMobile ? '7px 12px' : '8px 16px', fontFamily: 'inherit', whiteSpace: 'nowrap',
             transition: 'all 0.15s',
           }}>
-            🗑 Tout réinitialiser
+            🗑 Réinitialiser
           </button>
         )}
       </div>
