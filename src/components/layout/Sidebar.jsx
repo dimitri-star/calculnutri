@@ -1,13 +1,17 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import useAuthStore from '../../store/useAuthStore.js'
 
 const NAV = [
-  { to: '/', icon: '⚡', label: 'Calcul calorique' },
-  { to: '/plan', icon: '📋', label: 'Plan alimentaire' },
-  { to: '/assistant', icon: '🤖', label: 'Coach IA' },
-  { to: '/export', icon: '📥', label: 'Export CSV' },
+  { to: '/app', icon: '⚡', label: 'Calcul calorique' },
+  { to: '/app/plan', icon: '📋', label: 'Plan alimentaire' },
+  { to: '/app/assistant', icon: '🤖', label: 'Coach IA' },
+  { to: '/app/export', icon: '📥', label: 'Export CSV' },
 ]
 
 export default function Sidebar({ isMobile = false }) {
+  const signOut = useAuthStore((s) => s.signOut)
+  const user = useAuthStore((s) => s.user)
+  const navigate = useNavigate()
   return (
     <aside
       style={{
@@ -74,7 +78,7 @@ export default function Sidebar({ isMobile = false }) {
         }}
       >
         {NAV.map(({ to, icon, label }) => (
-          <NavLink key={to} to={to} end={to === '/'} style={{ textDecoration: 'none' }}>
+          <NavLink key={to} to={to} end={to === '/app'} style={{ textDecoration: 'none' }}>
             {({ isActive }) => (
               <div
                 style={{
@@ -104,20 +108,39 @@ export default function Sidebar({ isMobile = false }) {
       </nav>
 
       {!isMobile && (
-        <div
-        style={{
-          padding: '18px 22px',
-          borderTop: '1px solid var(--line)',
-        }}
-      >
-        <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.6, fontWeight: 500 }}>
-          Propulsé par Claude AI
-          <br />
-          <span style={{ color: 'var(--accent)', fontFamily: '"DM Mono", monospace', fontWeight: 600 }}>
-            claude-sonnet-4
-          </span>
+        <div style={{ padding: '18px 22px', borderTop: '1px solid var(--line)' }}>
+          {user && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user.email}
+              </div>
+              <button
+                onClick={async () => { await signOut(); navigate('/') }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: 10,
+                  border: '1px solid var(--line)',
+                  background: 'transparent',
+                  color: 'var(--muted)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  transition: 'background 0.2s, color 0.2s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-soft)'; e.currentTarget.style.color = 'var(--accent)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--muted)' }}
+              >
+                Se déconnecter
+              </button>
+            </div>
+          )}
+          <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>
+            NutriCalc © 2025
+          </div>
         </div>
-      </div>
       )}
     </aside>
   )
