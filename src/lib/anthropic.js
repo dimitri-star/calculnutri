@@ -118,11 +118,27 @@ export async function callAnthropic(
   }
 }
 
+function correctCaloriesFromMacros(plan) {
+  const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+  days.forEach((day) => {
+    if (!plan[day]?.repas) return
+    plan[day].repas.forEach((repas) => {
+      const calculated = Math.round(
+        (repas.proteines || 0) * 4 +
+        (repas.glucides  || 0) * 4 +
+        (repas.lipides   || 0) * 9
+      )
+      repas.calories = calculated
+    })
+  })
+  return plan
+}
+
 export function parseWeekPlan(text) {
   try {
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('Pas de JSON trouvé')
-    const raw = JSON.parse(jsonMatch[0])
+    const raw = correctCaloriesFromMacros(JSON.parse(jsonMatch[0]))
     const migrated = migratePlanToNewFormat(raw)
     return migrated && Object.keys(migrated).length > 0 ? migrated : getFallbackPlan()
   } catch {
@@ -135,7 +151,7 @@ export function parseWeekPlanStrict(text) {
   try {
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return null
-    const raw = JSON.parse(jsonMatch[0])
+    const raw = correctCaloriesFromMacros(JSON.parse(jsonMatch[0]))
     return migratePlanToNewFormat(raw)
   } catch {
     return null

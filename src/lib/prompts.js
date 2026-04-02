@@ -122,28 +122,37 @@ ${allAllowed.length > 0 ? allAllowed.map(f => `• ${f}`).join('\n') : '• Alim
 ━━━ ALIMENTS INTERDITS ━━━
 ${foods.dislikes?.length > 0 ? foods.dislikes.map(f => `• ${f}`).join('\n') : '• aucun'}
 
-━━━ VALEURS NUTRITIONNELLES DE RÉFÉRENCE ━━━
-Poulet/dinde CRU 100g    = 22P | 0G  | 1L  | 101 kcal
-Bœuf haché 5% CRU 100g  = 21P | 0G  | 5L  | 130 kcal
-Saumon CRU 100g          = 20P | 0G  | 13L | 200 kcal
-Sardines 100g            = 25P | 0G  | 11L | 200 kcal
-Oeuf entier 1pc (55g)    =  6P | 0G  | 5L  |  77 kcal
-Fromage blanc 0% 100g    =  8P | 4G  | 0L  |  50 kcal
-Riz basmati CRU 100g     =  7P | 78G | 1L  | 350 kcal
-Patate douce CRU 100g    =  2P | 20G | 0L  |  87 kcal
-Flocons d'avoine 100g    = 13P | 66G | 7L  | 370 kcal
-Banane 120g              =  1P | 27G | 0L  | 108 kcal
-Dattes 2pc (30g)         =  1P | 22G | 0L  |  92 kcal
-Mangue 150g              =  1P | 23G | 0L  |  95 kcal
-Kiwi 80g                 =  1P |  9G | 0L  |  40 kcal
-Amandes 30g              =  6P |  2G | 15L | 173 kcal
-Noix 25g                 =  4P |  2G | 16L | 164 kcal
-Huile d'olive 10ml       =  0P |  0G | 9L  |  81 kcal
-Brocolis 200g            =  6P | 10G | 0L  |  60 kcal
-Courgettes 200g          =  4P |  6G | 0L  |  34 kcal
-Betteraves 100g          =  2P | 10G | 0L  |  43 kcal
-Carottes 150g            =  1P | 13G | 0L  |  58 kcal
-Miel 10g                 =  0P |  8G | 0L  |  31 kcal
+━━━ VALEURS NUTRITIONNELLES DE RÉFÉRENCE (source Ciqual — utilise ces valeurs exactes) ━━━
+Oeuf moyen 1pc (55g)     = 7.7P | 0.4G  | 6.0L  |  87 kcal
+Oeuf gros 1pc (60g)      = 8.4P | 0.4G  | 6.5L  |  95 kcal
+Fromage blanc 0% 100g    = 8.0P | 3.9G  | 0.2L  |  49 kcal
+Yaourt grec 0% 100g      =10.0P | 3.6G  | 0.4L  |  57 kcal
+Poulet/dinde CRU 100g    =22.0P | 0G    | 2.0L  | 106 kcal
+Bœuf 5% CRU 100g         =20.5P | 0G    | 5.0L  | 129 kcal
+Steak/faux-filet CRU 100g=22.0P | 0G    | 7.5L  | 155 kcal
+Saumon CRU 100g          =20.0P | 0G    |13.5L  | 204 kcal
+Sardines boîte 100g      =25.0P | 0G    |11.5L  | 208 kcal
+Thon boîte eau 100g      =26.5P | 0G    | 0.8L  | 116 kcal
+Riz basmati CRU 100g     = 7.0P |77.7G  | 0.7L  | 350 kcal
+Flocons d'avoine 100g    =13.5P |59.0G  | 7.1L  | 372 kcal
+Patate douce CRU 100g    = 1.6P |20.5G  | 0.1L  |  90 kcal
+Pomme de terre CRU 100g  = 2.0P |17.0G  | 0.1L  |  77 kcal
+Quinoa CRU 100g          =13.1P |62.3G  | 5.6L  | 357 kcal
+Banane 1pc (120g)        = 1.3P |26.0G  | 0.2L  | 110 kcal
+Kiwi 1pc (80g)           = 0.9P | 9.8G  | 0.4L  |  44 kcal
+Mangue 100g              = 0.5P |14.8G  | 0.2L  |  63 kcal
+Dattes 2pc (30g)         = 0.7P |22.4G  | 0.1L  |  93 kcal
+Fruits rouges 100g       = 0.9P | 9.8G  | 0.4L  |  44 kcal
+Huile d'olive 10ml       = 0P   | 0G    | 9.8L  |  88 kcal
+Amandes 30g              = 6.3P | 2.1G  |15.4L  | 174 kcal
+Noix 25g                 = 4.0P | 1.7G  |16.5L  | 167 kcal
+Brocolis 100g            = 2.8P | 4.4G  | 0.4L  |  34 kcal
+Courgette 100g           = 2.0P | 3.0G  | 0.3L  |  17 kcal
+Betterave 100g           = 1.6P | 9.6G  | 0.1L  |  43 kcal
+Carotte 100g             = 1.0P | 7.0G  | 0.2L  |  34 kcal
+Épinards 100g            = 2.7P | 1.6G  | 0.5L  |  20 kcal
+Miel 10g                 = 0P   | 8.2G  | 0L    |  33 kcal
+Chocolat noir 85% 10g    = 1.3P | 2.9G  | 5.8L  |  62 kcal
 
 NOMBRE DE REPAS : L'utilisateur peut avoir entre 3 et 6 repas par jour.
 Par défaut génère 4 repas dans le tableau "repas". Si les notes mentionnent une collation supplémentaire ou un shaker, ajoute un repas.
@@ -169,6 +178,11 @@ RÈGLES :
 - Uniquement aliments naturels non transformés
 - Les dattes : en collation pré-training de préférence (pas le matin au réveil)
 - Utilise les aliments autorisés en PRIORITÉ ABSOLUE
+
+━━━ RÈGLE DE CALCUL OBLIGATOIRE ━━━
+Pour chaque repas, calcule les macros aliment par aliment en utilisant les valeurs ci-dessus, puis additionne. Ne jamais estimer ou arrondir globalement.
+Vérifie ensuite : (proteines × 4) + (glucides × 4) + (lipides × 9) = calories
+Si écart > 10 kcal → ajuste les glucides pour corriger exactement.
 
 ━━━ FORMAT DE RÉPONSE ━━━
 JSON BRUT UNIQUEMENT. Aucun texte avant ou après. Aucun markdown.

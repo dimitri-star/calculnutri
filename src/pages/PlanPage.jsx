@@ -324,7 +324,7 @@ function Step2({ onNext }) {
     setError(null)
     try {
       const prompt = buildAnalysisPrompt(store.profile, store.results, store.foods, store.planPrefs)
-      const text = await callAnthropic(prompt, 'analysis')
+      const text = await callAnthropic(prompt, 'analysis', { timeoutMs: 120000 })
       store.setAnalysis(text)
     } catch (e) {
       setError(e.message)
@@ -431,7 +431,7 @@ function Step3() {
     setError(null)
     try {
       const prompt = buildWeekPlanPrompt(store.profile, store.results, store.foods, store.planPrefs)
-      const text = await callAnthropic(prompt, 'plan')
+      const text = await callAnthropic(prompt, 'plan', { timeoutMs: 120000 })
       const plan = parseWeekPlan(text)
       const validatedPlan = validateAndCorrectPlan(plan, store.results)
       store.setWeekPlan(validatedPlan)
